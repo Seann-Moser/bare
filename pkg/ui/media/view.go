@@ -1,33 +1,39 @@
 package media
 
 import (
-	"context"
 	"fmt"
 
 	"gioui.org/layout"
 	"gioui.org/widget/material"
 	"github.com/Seann-Moser/bare/pkg/ui/themes"
+	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
 )
 
 type MediaView struct {
 	Kind Kind
 	Path string
 
-	Image     ImageView
-	Poster    ImageView
-	Player    Player
-	Controls  *MediaControls
-	LastError error
+	Image       ImageView
+	Poster      ImageView
+	Player      Player
+	VideoPlayer *InlineVideoPlayer
+	Controls    *MediaControls
+	LastError   error
 }
 
 func NewMediaView(player Player) *MediaView {
 	return &MediaView{
-		Player:   player,
-		Controls: NewMediaControls(),
+		Player:      player,
+		VideoPlayer: NewInlineVideoPlayer(),
+		Controls:    NewMediaControls(),
 	}
 }
 
 func (v *MediaView) Load(kind Kind, path string) error {
+	if v.Path != "" && v.Path != path {
+		v.Close()
+	}
+
 	v.Kind = kind
 	v.Path = path
 
@@ -36,17 +42,20 @@ func (v *MediaView) Load(kind Kind, path string) error {
 		v.LastError = nil
 		return v.Image.Load(path)
 
-	case KindAudio, KindVideo:
+	case KindAudio:
 		if v.Player == nil {
 			v.LastError = fmt.Errorf("no media player backend configured")
 			return v.LastError
 		}
-		if kind == KindVideo {
-			if thumb, err := extractVideoThumbnail(context.Background(), path); err == nil {
-				_ = v.Poster.Load(thumb)
-			}
-		}
 		err := v.Player.Load(path)
+		v.LastError = err
+		return err
+
+	case KindVideo:
+		if v.VideoPlayer == nil {
+			v.VideoPlayer = NewInlineVideoPlayer()
+		}
+		err := v.VideoPlayer.Load(path)
 		v.LastError = err
 		return err
 
@@ -58,6 +67,26 @@ func (v *MediaView) Load(kind Kind, path string) error {
 		v.LastError = fmt.Errorf("unsupported media kind %q", kind)
 		return v.LastError
 	}
+}
+
+func (v *MediaView) Close() error {
+	var err error
+
+	if v.VideoPlayer != nil {
+		if closeErr := v.VideoPlayer.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}
+	if v.Player != nil {
+		if stopErr := v.Player.Stop(); stopErr != nil && err == nil {
+			err = stopErr
+		}
+	}
+
+	v.Kind = ""
+	v.Path = ""
+	v.LastError = err
+	return err
 }
 
 func (v *MediaView) Layout(gtx layout.Context, th themes.Theme) layout.Dimensions {
@@ -73,14 +102,14 @@ func (v *MediaView) Layout(gtx layout.Context, th themes.Theme) layout.Dimension
 			Axis: layout.Vertical,
 		}.Layout(gtx,
 			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-				if v.Poster.img != nil {
-					return v.Poster.Draw(gtx)
+				if v.VideoPlayer != nil {
+					return v.VideoPlayer.Layout(gtx)
 				}
 				return layout.Dimensions{}
 			}),
-			layout.Rigid(spacerH(12)),
+			layout.Rigid(uiutils.SpacerH(12)),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return v.Controls.Layout(gtx, th, v.Player)
+				return v.Controls.Layout(gtx, th, v.VideoPlayer)
 			}),
 		)
 
@@ -91,7 +120,7 @@ func (v *MediaView) Layout(gtx layout.Context, th themes.Theme) layout.Dimension
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return material.Body1(th.Gio(), "Audio Preview").Layout(gtx)
 			}),
-			layout.Rigid(spacerH(12)),
+			layout.Rigid(uiutils.SpacerH(12)),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				return v.Controls.Layout(gtx, th, v.Player)
 			}),

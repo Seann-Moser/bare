@@ -13,6 +13,7 @@ import (
 	"gioui.org/widget/material"
 	"github.com/Seann-Moser/bare/pkg/ui/icons"
 	"github.com/Seann-Moser/bare/pkg/ui/themes"
+	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
 )
 
 type ButtonVariant string
@@ -58,7 +59,7 @@ func (b *Button) Layout(
 		fallthrough
 	default:
 		bg = th.Color.Primary
-		fg = readableOn(th.Color.Primary)
+		fg = uiutils.ReadableOn(th.Color.Primary)
 	}
 
 	if b.Clickable != nil && b.Clickable.Hovered() {
@@ -170,14 +171,4 @@ func labelChild(
 		lbl.Color = col
 		return lbl.Layout(gtx)
 	})
-}
-
-func readableOn(bg color.NRGBA) color.NRGBA {
-	lum := 0.299*float32(bg.R) + 0.587*float32(bg.G) + 0.114*float32(bg.B)
-
-	if lum > 160 {
-		return color.NRGBA{R: 20, G: 24, B: 31, A: 255}
-	}
-
-	return color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 }

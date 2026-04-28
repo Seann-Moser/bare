@@ -1,15 +1,13 @@
 package themes
 
 import (
-	"image"
 	"sort"
 
 	"gioui.org/layout"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
 )
 
 type ThemeSelector struct {
@@ -97,7 +95,7 @@ func (ts *ThemeSelector) layout(gtx layout.Context, th Theme) layout.Dimensions 
 			return settingHeader(gtx, gioTheme, th, "Theme Mode", "")
 		}),
 
-		layout.Rigid(spacer(8)),
+		layout.Rigid(uiutils.Spacer(8)),
 
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{
@@ -109,11 +107,11 @@ func (ts *ThemeSelector) layout(gtx layout.Context, th Theme) layout.Dimensions 
 			)
 		}),
 
-		layout.Rigid(spacer(16)),
+		layout.Rigid(uiutils.Spacer(16)),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return settingHeader(gtx, gioTheme, th, "Palette", paletteLabel(th.Palette))
 		}),
-		layout.Rigid(spacer(8)),
+		layout.Rigid(uiutils.Spacer(8)),
 
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return ts.paletteDropdown(gtx, gioTheme, th)
@@ -225,7 +223,7 @@ func settingHeader(
 
 	if current != "" {
 		children = append(children,
-			layout.Rigid(spacer(4)),
+			layout.Rigid(uiutils.Spacer(4)),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 				lbl := material.Body2(gioTheme, "Current: "+current)
 				lbl.Color = th.Color.TextMuted
@@ -280,16 +278,7 @@ func dropdownSurface(
 	th Theme,
 	child layout.Widget,
 ) layout.Dimensions {
-	defer clip.RRect{
-		Rect: image.Rectangle{Max: gtx.Constraints.Max},
-		NE:   gtx.Dp(unit.Dp(th.Radius.MD)),
-		NW:   gtx.Dp(unit.Dp(th.Radius.MD)),
-		SE:   gtx.Dp(unit.Dp(th.Radius.MD)),
-		SW:   gtx.Dp(unit.Dp(th.Radius.MD)),
-	}.Push(gtx.Ops).Pop()
-
-	paint.Fill(gtx.Ops, th.Color.SurfaceAlt)
-	return child(gtx)
+	return uiutils.RoundedSurface(gtx, th.Color.SurfaceAlt, unit.Dp(th.Radius.MD), child)
 }
 
 func modeLabel(mode Mode) string {
@@ -319,14 +308,5 @@ func paletteLabel(name PaletteName) string {
 		return "Pastel"
 	default:
 		return string(name)
-	}
-}
-
-func spacer(dp unit.Dp) layout.Widget {
-	return func(gtx layout.Context) layout.Dimensions {
-		size := gtx.Dp(dp)
-		return layout.Dimensions{
-			Size: image.Pt(size, size),
-		}
 	}
 }

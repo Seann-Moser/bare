@@ -1,17 +1,15 @@
 package ui
 
 import (
-	"image"
 	"image/color"
 
 	"gioui.org/layout"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/Seann-Moser/bare/pkg/ui/icons"
 	"github.com/Seann-Moser/bare/pkg/ui/themes"
+	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
 )
 
 type TabItem struct {
@@ -135,7 +133,7 @@ func (t *Tabs) layoutTab(
 
 	if active {
 		bg = th.Color.Primary
-		fg = readableOn(th.Color.Primary)
+		fg = uiutils.ReadableOn(th.Color.Primary)
 	} else if btn.Hovered() {
 		bg = themes.Mix(th.Color.SurfaceAlt, th.Color.Surface, 0.75)
 		fg = th.Color.Text
@@ -206,17 +204,5 @@ func roundedBackground(
 	radius unit.Dp,
 	child layout.Widget,
 ) layout.Dimensions {
-	defer clip.RRect{
-		Rect: image.Rectangle{
-			Max: gtx.Constraints.Max,
-		},
-		NE: gtx.Dp(radius),
-		NW: gtx.Dp(radius),
-		SE: gtx.Dp(radius),
-		SW: gtx.Dp(radius),
-	}.Push(gtx.Ops).Pop()
-
-	paint.Fill(gtx.Ops, col)
-
-	return child(gtx)
+	return uiutils.RoundedSurface(gtx, col, radius, child)
 }

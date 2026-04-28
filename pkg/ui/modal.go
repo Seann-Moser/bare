@@ -12,6 +12,7 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/Seann-Moser/bare/pkg/ui/themes"
+	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
 )
 
 type Modal struct {
@@ -60,7 +61,7 @@ func (m *Modal) Layout(
 			return layout.Center.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				gtx.Constraints.Max.X = min(gtx.Constraints.Max.X, gtx.Dp(unit.Dp(520)))
 
-				return card(gtx, th, func(gtx layout.Context) layout.Dimensions {
+				return uiutils.Card(gtx, unit.Dp(th.Radius.LG), th.Color.Surface, func(gtx layout.Context) layout.Dimensions {
 					return layout.UniformInset(unit.Dp(20)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 						return layout.Flex{
 							Axis: layout.Vertical,
@@ -76,7 +77,7 @@ func (m *Modal) Layout(
 									}),
 								)
 							}),
-							layout.Rigid(spacer(12)),
+							layout.Rigid(uiutils.Spacer(12)),
 							layout.Rigid(content),
 						)
 					})

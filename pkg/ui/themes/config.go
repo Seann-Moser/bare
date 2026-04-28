@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const configAppName = "bare"
+var ConfigAppName = "bare"
 
 type Config struct {
 	Mode    Mode        `yaml:"mode"`
@@ -82,7 +82,7 @@ func configPath() (string, error) {
 		return "", err
 	}
 
-	return filepath.Join(dir, configAppName, "theme.yaml"), nil
+	return filepath.Join(dir, ConfigAppName, "theme.yaml"), nil
 }
 
 func (c Config) normalized() Config {

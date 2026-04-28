@@ -2,14 +2,13 @@ package media
 
 import (
 	"fmt"
-	"image"
 	"time"
 
 	"gioui.org/layout"
-	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/Seann-Moser/bare/pkg/ui/themes"
+	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
 )
 
 type MediaControls struct {
@@ -17,6 +16,9 @@ type MediaControls struct {
 	Stop      widget.Clickable
 	Seek      widget.Float
 	Volume    widget.Float
+
+	seekDragging   bool
+	volumeDragging bool
 }
 
 func NewMediaControls() *MediaControls {
@@ -50,18 +52,26 @@ func (c *MediaControls) Layout(
 
 	duration := p.Duration()
 	position := p.Position()
+	displayPosition := position
+	seekValue := c.Seek.Value
 
-	if duration > 0 {
+	if c.Seek.Dragging() && duration > 0 {
+		displayPosition = time.Duration(float32(duration) * seekValue)
+		c.seekDragging = true
+	} else if c.seekDragging && duration > 0 {
+		target := time.Duration(float32(duration) * seekValue)
+		_ = p.Seek(target)
+		displayPosition = target
+		c.seekDragging = false
+	} else if duration > 0 && !c.Seek.Dragging() {
 		c.Seek.Value = float32(position) / float32(duration)
 	}
 
-	if c.Seek.Dragging() && duration > 0 {
-		target := time.Duration(float32(duration) * c.Seek.Value)
-		_ = p.Seek(target)
-	}
-
 	if c.Volume.Dragging() {
+		c.volumeDragging = true
+	} else if c.volumeDragging {
 		_ = p.SetVolume(c.Volume.Value)
+		c.volumeDragging = false
 	}
 
 	label := "Play"
@@ -80,24 +90,24 @@ func (c *MediaControls) Layout(
 				Alignment: layout.Middle,
 			}.Layout(gtx,
 				layout.Rigid(material.Button(gt, &c.PlayPause, label).Layout),
-				layout.Rigid(spacerW(8)),
+				layout.Rigid(uiutils.SpacerW(8)),
 				layout.Rigid(material.Button(gt, &c.Stop, "Stop").Layout),
-				layout.Rigid(spacerW(12)),
-				layout.Rigid(material.Body2(gt, fmtDuration(position)+" / "+fmtDuration(duration)).Layout),
+				layout.Rigid(uiutils.SpacerW(12)),
+				layout.Rigid(material.Body2(gt, fmtDuration(displayPosition)+" / "+fmtDuration(duration)).Layout),
 			)
 		}),
-		layout.Rigid(spacerH(8)),
+		layout.Rigid(uiutils.SpacerH(8)),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return material.Slider(gt, &c.Seek).Layout(gtx)
 		}),
-		layout.Rigid(spacerH(8)),
+		layout.Rigid(uiutils.SpacerH(8)),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{
 				Axis:      layout.Horizontal,
 				Alignment: layout.Middle,
 			}.Layout(gtx,
 				layout.Rigid(material.Body2(gt, "Volume").Layout),
-				layout.Rigid(spacerW(8)),
+				layout.Rigid(uiutils.SpacerW(8)),
 				layout.Flexed(1, material.Slider(gt, &c.Volume).Layout),
 			)
 		}),
@@ -114,16 +124,4 @@ func fmtDuration(d time.Duration) string {
 	sec := total % 60
 
 	return fmt.Sprintf("%d:%02d", min, sec)
-}
-
-func spacerW(dp unit.Dp) layout.Widget {
-	return func(gtx layout.Context) layout.Dimensions {
-		return layout.Dimensions{Size: image.Pt(gtx.Dp(dp), 0)}
-	}
-}
-
-func spacerH(dp unit.Dp) layout.Widget {
-	return func(gtx layout.Context) layout.Dimensions {
-		return layout.Dimensions{Size: image.Pt(0, gtx.Dp(dp))}
-	}
 }

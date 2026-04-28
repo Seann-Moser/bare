@@ -1,19 +1,16 @@
 package dashboard
 
 import (
-	"image"
-	"image/color"
-
 	"gioui.org/layout"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"github.com/Seann-Moser/bare/pkg/ui"
+	"github.com/Seann-Moser/bare/pkg/ui/filemanager"
 	"github.com/Seann-Moser/bare/pkg/ui/icons"
 	"github.com/Seann-Moser/bare/pkg/ui/text"
 	"github.com/Seann-Moser/bare/pkg/ui/themes"
+	"github.com/Seann-Moser/bare/pkg/ui/utils"
 )
 
 type Dashboard struct {
@@ -21,12 +18,13 @@ type Dashboard struct {
 	ContentTabs *ui.Tabs
 
 	ThemeSelector *themes.ThemeSelector
-	FileBrowser   *ui.FileBrowser
+	FileBrowser   *filemanager.FileBrowser
 	TextView      *text.TextView
 
 	OpenSettings widget.Clickable
 	Refresh      widget.Clickable
 	Settings     ui.Modal
+	Shell        ui.AppShell
 }
 
 func NewDashboard() *Dashboard {
@@ -54,11 +52,14 @@ func NewDashboard() *Dashboard {
 		}, "summary"),
 
 		ThemeSelector: themes.NewThemeSelector(),
-		FileBrowser:   ui.NewFileBrowser(""),
+		FileBrowser:   filemanager.NewFileBrowser(""),
 		TextView:      tv,
 
 		Settings: ui.Modal{
 			CloseOnScrim: true,
+		},
+		Shell: ui.AppShell{
+			SidebarWidth: unit.Dp(240),
 		},
 	}
 }
@@ -80,31 +81,22 @@ func (d *Dashboard) Layout(
 		})
 	}
 
-	dims := layout.Stack{}.Layout(gtx,
-		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
-			return layout.Flex{
-				Axis: layout.Horizontal,
-			}.Layout(gtx,
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					gtx.Constraints.Min.X = gtx.Dp(unit.Dp(240))
-					gtx.Constraints.Max.X = gtx.Dp(unit.Dp(240))
-					return d.sidebar(gtx, th, ic)
-				}),
-				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					var mainDims layout.Dimensions
-					th, mainDims = d.main(gtx, th, ic, systemDark)
-					return mainDims
-				}),
-			)
-		}),
-		//
-		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
+	dims := d.Shell.Layout(gtx,
+		func(gtx layout.Context) layout.Dimensions {
+			return d.sidebar(gtx, th, ic)
+		},
+		func(gtx layout.Context) layout.Dimensions {
+			var mainDims layout.Dimensions
+			th, mainDims = d.main(gtx, th, ic, systemDark)
+			return mainDims
+		},
+		func(gtx layout.Context) layout.Dimensions {
 			return d.Settings.Layout(gtx, th, "Settings", func(gtx layout.Context) layout.Dimensions {
 				var dims layout.Dimensions
 				th, dims = d.ThemeSelector.LayoutThemeSelector(gtx, th, systemDark)
 				return dims
 			})
-		}),
+		},
 	)
 
 	return th, dims
@@ -115,17 +107,15 @@ func (d *Dashboard) sidebar(
 	th themes.Theme,
 	ic *icons.Iconify,
 ) layout.Dimensions {
-	return panel(gtx, th.Color.SurfaceAlt, unit.Dp(th.Radius.LG), func(gtx layout.Context) layout.Dimensions {
+	return utils.Panel(gtx, th.Color.SurfaceAlt, unit.Dp(th.Radius.LG), func(gtx layout.Context) layout.Dimensions {
 		return layout.UniformInset(unit.Dp(20)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{
 				Axis: layout.Vertical,
 			}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					lbl := material.H6(th.Gio(), "Gio Dashboard")
-					lbl.Color = th.Color.Text
-					return lbl.Layout(gtx)
+					return ui.LayoutSidebarTitle(gtx, th, "Gio Dashboard")
 				}),
-				layout.Rigid(ui.SpacerH(20)),
+				layout.Rigid(utils.SpacerH(20)),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					return d.SidebarTabs.Layout(gtx, th, ic)
 				}),
@@ -151,7 +141,7 @@ func (d *Dashboard) main(
 
 		if sidebarSelection == "overview" {
 			children = append(children,
-				layout.Rigid(ui.SpacerH(20)),
+				layout.Rigid(utils.SpacerH(20)),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					return d.ContentTabs.Layout(gtx, th, ic)
 				}),
@@ -159,7 +149,7 @@ func (d *Dashboard) main(
 		}
 
 		children = append(children,
-			layout.Rigid(ui.SpacerH(20)),
+			layout.Rigid(utils.SpacerH(20)),
 			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 				switch sidebarSelection {
 				case "files":
@@ -204,35 +194,20 @@ func (d *Dashboard) topbar(
 	th themes.Theme,
 	ic *icons.Iconify,
 ) layout.Dimensions {
-	return layout.Flex{
-		Axis:      layout.Horizontal,
-		Alignment: layout.Middle,
-	}.Layout(gtx,
-		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			lbl := material.H5(th.Gio(), "Dashboard")
-			lbl.Color = th.Color.Text
-			return lbl.Layout(gtx)
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := ui.Button{
-				Clickable: &d.Refresh,
-				Text:      "Refresh",
-				Prefix:    "mdi:refresh",
-				Variant:   ui.ButtonSecondary,
-			}
-			return btn.Layout(gtx, th, ic)
-		}),
-		layout.Rigid(ui.SpacerW(8)),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := ui.Button{
-				Clickable: &d.OpenSettings,
-				Text:      "Settings",
-				Prefix:    "mdi:cog",
-				Variant:   ui.ButtonPrimary,
-			}
-			return btn.Layout(gtx, th, ic)
-		}),
-	)
+	return ui.LayoutTopbar(gtx, th, ic, "Dashboard", []ui.TopbarAction{
+		{
+			Clickable: &d.Refresh,
+			Text:      "Refresh",
+			Prefix:    "mdi:refresh",
+			Variant:   ui.ButtonSecondary,
+		},
+		{
+			Clickable: &d.OpenSettings,
+			Text:      "Settings",
+			Prefix:    "mdi:cog",
+			Variant:   ui.ButtonPrimary,
+		},
+	})
 }
 
 func (d *Dashboard) overview(
@@ -248,15 +223,15 @@ func (d *Dashboard) overview(
 				Axis: layout.Horizontal,
 			}.Layout(gtx,
 				layout.Flexed(1, statCard(th, ic, "Files", "128", "mdi:folder")),
-				layout.Rigid(ui.SpacerW(12)),
+				layout.Rigid(utils.SpacerW(12)),
 				layout.Flexed(1, statCard(th, ic, "Media", "42", "mdi:play-box")),
-				layout.Rigid(ui.SpacerW(12)),
+				layout.Rigid(utils.SpacerW(12)),
 				layout.Flexed(1, statCard(th, ic, "Logs", "9.2k", "mdi:text-box")),
 			)
 		}),
-		layout.Rigid(ui.SpacerH(16)),
+		layout.Rigid(utils.SpacerH(16)),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			return panel(gtx, th.Color.Surface, unit.Dp(th.Radius.LG), func(gtx layout.Context) layout.Dimensions {
+			return utils.Panel(gtx, th.Color.Surface, unit.Dp(th.Radius.LG), func(gtx layout.Context) layout.Dimensions {
 				return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 					return d.TextView.Layout(gtx, th)
 				})
@@ -270,7 +245,7 @@ func (d *Dashboard) activity(
 	th themes.Theme,
 	ic *icons.Iconify,
 ) layout.Dimensions {
-	return panel(gtx, th.Color.Surface, unit.Dp(th.Radius.LG), func(gtx layout.Context) layout.Dimensions {
+	return utils.Panel(gtx, th.Color.Surface, unit.Dp(th.Radius.LG), func(gtx layout.Context) layout.Dimensions {
 		return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{
 				Axis: layout.Vertical,
@@ -280,13 +255,13 @@ func (d *Dashboard) activity(
 					lbl.Color = th.Color.Text
 					return lbl.Layout(gtx)
 				}),
-				layout.Rigid(ui.SpacerH(8)),
+				layout.Rigid(utils.SpacerH(8)),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					lbl := material.Body1(th.Gio(), "Activity feed and events will appear here.")
 					lbl.Color = th.Color.TextMuted
 					return lbl.Layout(gtx)
 				}),
-				layout.Rigid(ui.SpacerH(16)),
+				layout.Rigid(utils.SpacerH(16)),
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					return d.TextView.Layout(gtx, th)
 				}),
@@ -302,7 +277,7 @@ func (d *Dashboard) details(
 ) layout.Dimensions {
 	_ = ic
 
-	return panel(gtx, th.Color.Surface, unit.Dp(th.Radius.LG), func(gtx layout.Context) layout.Dimensions {
+	return utils.Panel(gtx, th.Color.Surface, unit.Dp(th.Radius.LG), func(gtx layout.Context) layout.Dimensions {
 		return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{
 				Axis: layout.Vertical,
@@ -312,7 +287,7 @@ func (d *Dashboard) details(
 					lbl.Color = th.Color.Text
 					return lbl.Layout(gtx)
 				}),
-				layout.Rigid(ui.SpacerH(8)),
+				layout.Rigid(utils.SpacerH(8)),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					lbl := material.Body1(th.Gio(), "Detailed metadata and diagnostics will appear here.")
 					lbl.Color = th.Color.TextMuted
@@ -331,7 +306,7 @@ func statCard(
 	iconName string,
 ) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
-		return panel(gtx, th.Color.Surface, unit.Dp(th.Radius.LG), func(gtx layout.Context) layout.Dimensions {
+		return utils.Panel(gtx, th.Color.Surface, unit.Dp(th.Radius.LG), func(gtx layout.Context) layout.Dimensions {
 			return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				return layout.Flex{
 					Axis:      layout.Horizontal,
@@ -343,7 +318,7 @@ func statCard(
 						}
 						return ic.Layout(gtx, iconName, unit.Dp(32), th.Color.Primary)
 					}),
-					layout.Rigid(ui.SpacerW(12)),
+					layout.Rigid(utils.SpacerW(12)),
 					layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 						return layout.Flex{
 							Axis: layout.Vertical,
@@ -364,25 +339,6 @@ func statCard(
 			})
 		})
 	}
-}
-
-func panel(
-	gtx layout.Context,
-	bg color.NRGBA,
-	radius unit.Dp,
-	child layout.Widget,
-) layout.Dimensions {
-	defer clip.RRect{
-		Rect: image.Rectangle{Max: gtx.Constraints.Max},
-		NE:   gtx.Dp(radius),
-		NW:   gtx.Dp(radius),
-		SE:   gtx.Dp(radius),
-		SW:   gtx.Dp(radius),
-	}.Push(gtx.Ops).Pop()
-
-	paint.Fill(gtx.Ops, bg)
-
-	return child(gtx)
 }
 
 type App struct {

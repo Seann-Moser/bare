@@ -1,8 +1,7 @@
-package ui
+package filemanager
 
 import (
 	"fmt"
-	"image"
 	"image/color"
 	"os"
 	"path/filepath"
@@ -14,16 +13,15 @@ import (
 
 	"gioui.org/io/key"
 	"gioui.org/layout"
-	"gioui.org/op"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/Seann-Moser/bare/pkg/ui"
 	"github.com/Seann-Moser/bare/pkg/ui/icons"
 	"github.com/Seann-Moser/bare/pkg/ui/media"
 	uitext "github.com/Seann-Moser/bare/pkg/ui/text"
 	"github.com/Seann-Moser/bare/pkg/ui/themes"
+	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
 )
 
 type FileBrowser struct {
@@ -37,7 +35,7 @@ type FileBrowser struct {
 	PathError    string
 	ActionError  string
 	SearchInput  widget.Editor
-	SortToggle   widget.Clickable
+	SortDropdown ui.Dropdown
 	OrderButton  widget.Clickable
 	CreateInput  widget.Editor
 	CreateButton widget.Clickable
@@ -46,7 +44,6 @@ type FileBrowser struct {
 	Extensions []string // example: []string{".png", ".jpg", ".mp4"}
 	SortMode   FileSortMode
 	SortDesc   bool
-	SortOpen   bool
 
 	List layout.List
 
@@ -84,7 +81,7 @@ const (
 
 func NewFileBrowser(dir string) *FileBrowser {
 	if dir == "" {
-		dir, _ = os.UserHomeDir()
+		dir, _ = os.Getwd()
 	}
 
 	return &FileBrowser{
@@ -113,6 +110,14 @@ func NewFileBrowser(dir string) *FileBrowser {
 		CreateInput: widget.Editor{
 			SingleLine: true,
 			Submit:     true,
+		},
+		SortDropdown: ui.Dropdown{
+			Prefix:     "mdi:sort",
+			Variant:    ui.ButtonSecondary,
+			Width:      unit.Dp(180),
+			MaxHeight:  unit.Dp(180),
+			OffsetY:    unit.Dp(48),
+			AlignRight: true,
 		},
 		SortMode: FileSortName,
 	}
@@ -157,13 +162,11 @@ func (b *FileBrowser) Layout(
 			b.createFolder()
 		}
 	}
-	for b.SortToggle.Clicked(gtx) {
-		b.SortOpen = !b.SortOpen
-	}
+	b.SortDropdown.Update(gtx)
 	for mode, btn := range b.sortOptions {
 		for btn.Clicked(gtx) {
 			b.SortMode = mode
-			b.SortOpen = false
+			b.SortDropdown.Close()
 		}
 	}
 	for b.OrderButton.Clicked(gtx) {
@@ -195,11 +198,11 @@ func (b *FileBrowser) Layout(
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return b.layoutPathBar(gtx, th, ic)
 		}),
-		layout.Rigid(SpacerH(8)),
+		layout.Rigid(uiutils.SpacerH(8)),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return b.layoutFilterBar(gtx, th, ic, len(entries))
 		}),
-		layout.Rigid(SpacerH(8)),
+		layout.Rigid(uiutils.SpacerH(8)),
 		//layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 		//	return b.layoutActionBar(gtx, th, ic)
 		//}),
@@ -216,7 +219,7 @@ func (b *FileBrowser) Layout(
 			if b.PathError == "" {
 				return layout.Dimensions{}
 			}
-			return SpacerH(8)(gtx)
+			return uiutils.SpacerH(8)(gtx)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if b.ActionError == "" {
@@ -231,7 +234,7 @@ func (b *FileBrowser) Layout(
 			if b.ActionError == "" {
 				return layout.Dimensions{}
 			}
-			return SpacerH(8)(gtx)
+			return uiutils.SpacerH(8)(gtx)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			if b.SelectedPath == "" {
@@ -244,7 +247,7 @@ func (b *FileBrowser) Layout(
 				layout.Flexed(0.55, func(gtx layout.Context) layout.Dimensions {
 					return b.layoutList(gtx, th, ic, entries)
 				}),
-				layout.Rigid(SpacerW(16)),
+				layout.Rigid(uiutils.SpacerW(16)),
 				layout.Flexed(0.45, func(gtx layout.Context) layout.Dimensions {
 					return b.layoutPreview(gtx, th)
 				}),
@@ -271,89 +274,43 @@ func (b *FileBrowser) layoutFilterBar(
 		orderIcon = "mdi:sort-descending"
 	}
 
-	return layout.Stack{}.Layout(gtx,
-		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
-			return layout.Flex{
-				Axis:      layout.Horizontal,
-				Alignment: layout.Middle,
-			}.Layout(gtx,
-
-				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					return surface(gtx, th.Color.Surface, func(gtx layout.Context) layout.Dimensions {
-						return layout.Inset{
-							Top:    unit.Dp(6),
-							Bottom: unit.Dp(6),
-							Left:   unit.Dp(10),
-							Right:  unit.Dp(10),
-						}.Layout(gtx, editor.Layout)
-					})
-				}),
-				layout.Rigid(SpacerW(12)),
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return b.layoutSortToggle(gtx, th, ic, sortLabel)
-				}),
-				layout.Rigid(SpacerW(8)),
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					btn := Button{
-						Clickable: &b.OrderButton,
-						Text:      orderLabel,
-						Prefix:    orderIcon,
-						Variant:   ButtonSecondary,
-					}
-					return btn.Layout(gtx, th, ic)
-				}),
-				layout.Rigid(SpacerW(12)),
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					lbl := material.Body2(th.Gio(), fmt.Sprintf("%d items", entryCount))
-					lbl.Color = th.Color.TextMuted
-					return lbl.Layout(gtx)
-				}),
-			)
+	return layout.Flex{
+		Axis:      layout.Horizontal,
+		Alignment: layout.Middle,
+	}.Layout(gtx,
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			return surface(gtx, th.Color.Surface, func(gtx layout.Context) layout.Dimensions {
+				return layout.Inset{
+					Top:    unit.Dp(6),
+					Bottom: unit.Dp(6),
+					Left:   unit.Dp(10),
+					Right:  unit.Dp(10),
+				}.Layout(gtx, editor.Layout)
+			})
 		}),
-		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
-			if !b.SortOpen {
-				return layout.Dimensions{}
+		layout.Rigid(uiutils.SpacerW(12)),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return b.SortDropdown.Layout(gtx, th, ic, "Sort: "+sortLabel, func(gtx layout.Context) layout.Dimensions {
+				return b.layoutSortMenu(gtx, th, ic)
+			})
+		}),
+		layout.Rigid(uiutils.SpacerW(8)),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			btn := ui.Button{
+				Clickable: &b.OrderButton,
+				Text:      orderLabel,
+				Prefix:    orderIcon,
+				Variant:   ui.ButtonSecondary,
 			}
-
-			offset := op.Offset(image.Pt(
-				gtx.Constraints.Max.X-gtx.Dp(unit.Dp(80)),
-				gtx.Dp(unit.Dp(48)),
-			)).Push(gtx.Ops)
-			defer offset.Pop()
-
-			menuGTX := gtx
-			menuGTX.Constraints.Min = image.Point{}
-			menuGTX.Constraints.Max = image.Pt(
-				gtx.Dp(unit.Dp(180)),
-				gtx.Dp(unit.Dp(180)),
-			)
-
-			b.layoutSortMenu(menuGTX, th, ic)
-
-			// important: don't affect parent layout size
-			return layout.Dimensions{}
+			return btn.Layout(gtx, th, ic)
+		}),
+		layout.Rigid(uiutils.SpacerW(12)),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			lbl := material.Body2(th.Gio(), fmt.Sprintf("%d items", entryCount))
+			lbl.Color = th.Color.TextMuted
+			return lbl.Layout(gtx)
 		}),
 	)
-}
-
-func (b *FileBrowser) layoutSortToggle(
-	gtx layout.Context,
-	th themes.Theme,
-	ic *icons.Iconify,
-	label string,
-) layout.Dimensions {
-	suffix := "mdi:chevron-down"
-	if b.SortOpen {
-		suffix = "mdi:chevron-up"
-	}
-	btn := Button{
-		Clickable: &b.SortToggle,
-		Text:      "Sort: " + label,
-		Prefix:    "mdi:sort",
-		Suffix:    suffix,
-		Variant:   ButtonSecondary,
-	}
-	return btn.Layout(gtx, th, ic)
 }
 
 func (b *FileBrowser) layoutSortMenu(
@@ -361,19 +318,15 @@ func (b *FileBrowser) layoutSortMenu(
 	th themes.Theme,
 	ic *icons.Iconify,
 ) layout.Dimensions {
-	return surface(gtx, th.Color.Surface, func(gtx layout.Context) layout.Dimensions {
-		return layout.UniformInset(unit.Dp(8)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			return layout.Flex{
-				Axis: layout.Vertical,
-			}.Layout(gtx,
-				b.layoutSortOption(gtx, th, ic, FileSortName),
-				layout.Rigid(SpacerH(6)),
-				b.layoutSortOption(gtx, th, ic, FileSortModified),
-				layout.Rigid(SpacerH(6)),
-				b.layoutSortOption(gtx, th, ic, FileSortSize),
-			)
-		})
-	})
+	return layout.Flex{
+		Axis: layout.Vertical,
+	}.Layout(gtx,
+		b.layoutSortOption(gtx, th, ic, FileSortName),
+		layout.Rigid(uiutils.SpacerH(6)),
+		b.layoutSortOption(gtx, th, ic, FileSortModified),
+		layout.Rigid(uiutils.SpacerH(6)),
+		b.layoutSortOption(gtx, th, ic, FileSortSize),
+	)
 }
 
 func (b *FileBrowser) layoutSortOption(
@@ -383,11 +336,11 @@ func (b *FileBrowser) layoutSortOption(
 	mode FileSortMode,
 ) layout.FlexChild {
 	return layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-		variant := ButtonSecondary
+		variant := ui.ButtonSecondary
 		if b.SortMode == mode {
-			variant = ButtonPrimary
+			variant = ui.ButtonPrimary
 		}
-		btn := Button{
+		btn := ui.Button{
 			Clickable: b.sortOptions[mode],
 			Text:      sortModeLabel(mode),
 			Variant:   variant,
@@ -410,16 +363,16 @@ func (b *FileBrowser) layoutActionBar(
 		Alignment: layout.Middle,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := Button{
+			btn := ui.Button{
 				Clickable: &b.HomeButton,
 				Prefix:    "mdi:home-outline",
-				Variant:   ButtonSecondary,
+				Variant:   ui.ButtonSecondary,
 				Icon:      true,
 				Text:      "mdi:home-outline",
 			}
 			return btn.Layout(gtx, th, ic)
 		}),
-		layout.Rigid(SpacerW(12)),
+		layout.Rigid(uiutils.SpacerW(12)),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			return surface(gtx, th.Color.Surface, func(gtx layout.Context) layout.Dimensions {
 				return layout.Inset{
@@ -430,7 +383,7 @@ func (b *FileBrowser) layoutActionBar(
 				}.Layout(gtx, editor.Layout)
 			})
 		}),
-		layout.Rigid(SpacerW(12)),
+		layout.Rigid(uiutils.SpacerW(12)),
 		//layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 		//	btn := Button{
 		//		Clickable: &b.CreateButton,
@@ -457,16 +410,16 @@ func (b *FileBrowser) layoutPathBar(
 		Alignment: layout.Middle,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			btn := Button{
+			btn := ui.Button{
 				Clickable: &b.HomeButton,
 				Prefix:    "mdi:home-outline",
-				Variant:   ButtonPrimary,
+				Variant:   ui.ButtonPrimary,
 				Icon:      true,
 				Text:      "mdi:home-outline",
 			}
 			return btn.Layout(gtx, th, ic)
 		}),
-		layout.Rigid(SpacerW(12)),
+		layout.Rigid(uiutils.SpacerW(12)),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			return surface(gtx, th.Color.Surface, func(gtx layout.Context) layout.Dimensions {
 				return layout.Inset{
@@ -687,10 +640,10 @@ func (b *FileBrowser) layoutRow(
 						return layout.Inset{
 							Left: unit.Dp(8),
 						}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-							btn := Button{
+							btn := ui.Button{
 								Clickable: b.deleteRow(entry.Path),
 								Prefix:    "mdi:trash-can-outline",
-								Variant:   ButtonGhost,
+								Variant:   ui.ButtonGhost,
 								Icon:      true,
 								Text:      "mdi:trash-can-outline",
 							}
@@ -709,16 +662,14 @@ func (b *FileBrowser) loadPreview(path string) {
 	}
 
 	if isTextPreviewable(path) {
-		b.Preview.Kind = ""
-		b.Preview.Path = ""
+		b.clearMediaPreview()
 		b.loadTextPreview(path)
 		return
 	}
 
 	kind, ok := mediaKind(path)
 	if !ok {
-		b.Preview.Kind = ""
-		b.Preview.Path = ""
+		b.clearMediaPreview()
 		if b.TextPreview != nil {
 			b.TextPreview.SetText("")
 		}
@@ -729,6 +680,12 @@ func (b *FileBrowser) loadPreview(path string) {
 		b.TextPreview.SetText("")
 	}
 	_ = b.Preview.Load(kind, path)
+}
+
+func (b *FileBrowser) clearMediaPreview() {
+	if b.Preview != nil {
+		_ = b.Preview.Close()
+	}
 }
 
 func (b *FileBrowser) handleListKeys(gtx layout.Context, entries []FileEntry) {
@@ -858,6 +815,7 @@ func (b *FileBrowser) navigateToInput() {
 
 	b.PathError = ""
 	if info.IsDir() {
+		b.clearMediaPreview()
 		b.Dir = path
 		b.SelectedPath = ""
 		b.CursorPath = ""
@@ -875,6 +833,7 @@ func (b *FileBrowser) openEntry(entry FileEntry) {
 	b.CursorPath = entry.Path
 	b.ActionError = ""
 	if entry.IsDir {
+		b.clearMediaPreview()
 		b.Dir = entry.Path
 		b.SelectedPath = ""
 		b.PathError = ""
@@ -897,6 +856,7 @@ func (b *FileBrowser) navigateHome() {
 		return
 	}
 
+	b.clearMediaPreview()
 	b.Dir = home
 	b.SelectedPath = ""
 	b.CursorPath = ""
@@ -913,6 +873,7 @@ func (b *FileBrowser) navigateUp() {
 	}
 
 	b.Dir = parent
+	b.clearMediaPreview()
 	b.SelectedPath = ""
 	b.CursorPath = ""
 	b.PathError = ""
@@ -970,8 +931,7 @@ func (b *FileBrowser) deleteEntry(path string) {
 		b.CursorPath = ""
 	}
 	if b.Preview != nil && b.Preview.Path == path {
-		b.Preview.Path = ""
-		b.Preview.Kind = ""
+		b.clearMediaPreview()
 	}
 	if b.TextPreview != nil {
 		b.TextPreview.SetText("")
@@ -1008,7 +968,7 @@ func (b *FileBrowser) layoutPreview(
 					lbl.Color = th.Color.Text
 					return lbl.Layout(gtx)
 				}),
-				layout.Rigid(SpacerH(8)),
+				layout.Rigid(uiutils.SpacerH(8)),
 			}
 
 			if err == nil {
@@ -1018,7 +978,7 @@ func (b *FileBrowser) layoutPreview(
 						lbl.Color = th.Color.TextMuted
 						return lbl.Layout(gtx)
 					}),
-					layout.Rigid(SpacerH(16)),
+					layout.Rigid(uiutils.SpacerH(16)),
 				)
 			}
 
@@ -1032,7 +992,7 @@ func (b *FileBrowser) layoutPreview(
 							return b.Preview.Layout(gtx, th)
 						})
 					}),
-					layout.Rigid(SpacerH(16)),
+					layout.Rigid(uiutils.SpacerH(16)),
 				)
 			} else if isTextPreviewable(b.SelectedPath) && b.TextPreview != nil {
 				children = append(children,
@@ -1041,7 +1001,7 @@ func (b *FileBrowser) layoutPreview(
 							return b.TextPreview.Layout(gtx, th)
 						})
 					}),
-					layout.Rigid(SpacerH(16)),
+					layout.Rigid(uiutils.SpacerH(16)),
 				)
 			}
 
@@ -1102,7 +1062,7 @@ func (b *FileBrowser) layoutMetadata(
 	children := make([]layout.FlexChild, 0, len(rows)*2)
 	for idx, row := range rows {
 		if idx > 0 {
-			children = append(children, layout.Rigid(SpacerH(6)))
+			children = append(children, layout.Rigid(uiutils.SpacerH(6)))
 		}
 		line := row
 		children = append(children, layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -1131,7 +1091,7 @@ func (b *FileBrowser) layoutDocumentPreview(
 					lbl.Color = th.Color.Text
 					return lbl.Layout(gtx)
 				}),
-				layout.Rigid(SpacerH(8)),
+				layout.Rigid(uiutils.SpacerH(8)),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					lbl := material.Body2(th.Gio(), "Inline PDF page rendering is not available yet.")
 					lbl.Color = th.Color.TextMuted
@@ -1343,12 +1303,5 @@ func sortModeLabel(mode FileSortMode) string {
 }
 
 func surface(gtx layout.Context, col color.NRGBA, child layout.Widget) layout.Dimensions {
-
-	paint.FillShape(
-		gtx.Ops,
-		col,
-		clip.Rect{Max: gtx.Constraints.Max}.Op(),
-	)
-
-	return child(gtx)
+	return uiutils.Surface(gtx, col, child)
 }
