@@ -5,8 +5,10 @@ import (
 	"time"
 
 	"gioui.org/layout"
+	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"golang.org/x/exp/shiny/materialdesign/icons"
 	"github.com/Seann-Moser/bare/pkg/ui/themes"
 	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
 )
@@ -20,6 +22,12 @@ type MediaControls struct {
 	seekDragging   bool
 	volumeDragging bool
 }
+
+var (
+	playIcon  = mustNewIcon(icons.AVPlayArrow)
+	pauseIcon = mustNewIcon(icons.AVPause)
+	stopIcon  = mustNewIcon(icons.AVStop)
+)
 
 func NewMediaControls() *MediaControls {
 	return &MediaControls{
@@ -74,12 +82,26 @@ func (c *MediaControls) Layout(
 		c.volumeDragging = false
 	}
 
-	label := "Play"
-	if p.State() == StatePlaying {
-		label = "Pause"
-	}
-
 	gt := th.Gio()
+	playPauseIcon := playIcon
+	playPauseLabel := "Play"
+	if p.State() == StatePlaying {
+		playPauseIcon = pauseIcon
+		playPauseLabel = "Pause"
+	}
+	playPauseBtn := material.IconButton(gt, &c.PlayPause, playPauseIcon, playPauseLabel)
+	playPauseBtn.Size = unit.Dp(20)
+	playPauseBtn.Inset = layout.UniformInset(unit.Dp(14))
+
+	stopBtn := material.IconButton(gt, &c.Stop, stopIcon, "Stop")
+	stopBtn.Size = unit.Dp(20)
+	stopBtn.Inset = layout.UniformInset(unit.Dp(14))
+
+	seekSlider := material.Slider(gt, &c.Seek)
+	seekSlider.FingerSize = unit.Dp(42)
+
+	volumeSlider := material.Slider(gt, &c.Volume)
+	volumeSlider.FingerSize = unit.Dp(38)
 
 	return layout.Flex{
 		Axis: layout.Vertical,
@@ -89,16 +111,19 @@ func (c *MediaControls) Layout(
 				Axis:      layout.Horizontal,
 				Alignment: layout.Middle,
 			}.Layout(gtx,
-				layout.Rigid(material.Button(gt, &c.PlayPause, label).Layout),
+				layout.Rigid(playPauseBtn.Layout),
 				layout.Rigid(uiutils.SpacerW(8)),
-				layout.Rigid(material.Button(gt, &c.Stop, "Stop").Layout),
+				layout.Rigid(stopBtn.Layout),
 				layout.Rigid(uiutils.SpacerW(12)),
 				layout.Rigid(material.Body2(gt, fmtDuration(displayPosition)+" / "+fmtDuration(duration)).Layout),
 			)
 		}),
 		layout.Rigid(uiutils.SpacerH(8)),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return material.Slider(gt, &c.Seek).Layout(gtx)
+			return layout.Inset{
+				Top:    unit.Dp(4),
+				Bottom: unit.Dp(4),
+			}.Layout(gtx, seekSlider.Layout)
 		}),
 		layout.Rigid(uiutils.SpacerH(8)),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -108,10 +133,23 @@ func (c *MediaControls) Layout(
 			}.Layout(gtx,
 				layout.Rigid(material.Body2(gt, "Volume").Layout),
 				layout.Rigid(uiutils.SpacerW(8)),
-				layout.Flexed(1, material.Slider(gt, &c.Volume).Layout),
+				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+					return layout.Inset{
+						Top:    unit.Dp(2),
+						Bottom: unit.Dp(2),
+					}.Layout(gtx, volumeSlider.Layout)
+				}),
 			)
 		}),
 	)
+}
+
+func mustNewIcon(data []byte) *widget.Icon {
+	ic, err := widget.NewIcon(data)
+	if err != nil {
+		panic(err)
+	}
+	return ic
 }
 
 func fmtDuration(d time.Duration) string {
