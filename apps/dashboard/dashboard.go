@@ -390,13 +390,21 @@ type App struct {
 	Icons      *icons.Iconify
 	Dashboard  *Dashboard
 	SystemDark bool
+
+	lastSavedTheme themes.Config
 }
 
 func NewApp() *App {
+	cfg, err := themes.LoadConfig()
+	if err != nil {
+		cfg = themes.DefaultConfig()
+	}
+
 	return &App{
-		Theme:     themes.New(themes.ModeSystem, themes.PaletteOcean, false),
-		Icons:     icons.NewIconify(),
-		Dashboard: NewDashboard(),
+		Theme:          cfg.Theme(false),
+		Icons:          icons.NewIconify(),
+		Dashboard:      NewDashboard(),
+		lastSavedTheme: cfg,
 	}
 }
 
@@ -409,6 +417,13 @@ func (a *App) Layout(gtx layout.Context) layout.Dimensions {
 		a.Icons,
 		a.SystemDark,
 	)
+
+	currentCfg := themes.ConfigFromTheme(a.Theme)
+	if currentCfg != a.lastSavedTheme {
+		if err := themes.SaveConfig(currentCfg); err == nil {
+			a.lastSavedTheme = currentCfg
+		}
+	}
 
 	return dims
 }

@@ -62,11 +62,12 @@ var Palettes = map[PaletteName]RawPalette{
 }
 
 func New(mode Mode, paletteName PaletteName, systemDark bool) Theme {
-	if mode == ModeSystem {
+	effectiveMode := mode
+	if effectiveMode == ModeSystem {
 		if systemDark {
-			mode = ModeDark
+			effectiveMode = ModeDark
 		} else {
-			mode = ModeLight
+			effectiveMode = ModeLight
 		}
 	}
 	raw, ok := Palettes[paletteName]
@@ -92,7 +93,7 @@ func New(mode Mode, paletteName PaletteName, systemDark bool) Theme {
 		},
 	}
 
-	if mode == ModeDark {
+	if effectiveMode == ModeDark {
 		t.Color = darkTokens(raw)
 	} else {
 		t.Color = lightTokens(raw)

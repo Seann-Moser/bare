@@ -1,9 +1,11 @@
 package icons
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"image"
 	"image/color"
 	"io"
 	"net/http"
@@ -13,8 +15,11 @@ import (
 	"time"
 
 	"gioui.org/layout"
+	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"gioui.org/widget"
+	"github.com/srwiley/oksvg"
+	"github.com/srwiley/rasterx"
 )
 
 const FallbackIcon = "subway:missing"
@@ -25,8 +30,15 @@ type Iconify struct {
 	CacheDir string
 	Client   *http.Client
 
-	cache   map[string]*widget.Icon
-	missing map[string]struct{}
+	cache       map[string]*SVGIcon
+	failedUntil map[string]time.Time
+}
+
+type SVGIcon struct {
+	src      []byte
+	op       paint.ImageOp
+	imgSize  int
+	imgColor color.NRGBA
 }
 
 func NewIconify() *Iconify {
@@ -40,8 +52,8 @@ func NewIconify() *Iconify {
 		Client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		cache:   map[string]*widget.Icon{},
-		missing: map[string]struct{}{},
+		cache:       map[string]*SVGIcon{},
+		failedUntil: map[string]time.Time{},
 	}
 }
 
@@ -56,25 +68,25 @@ func (i *Iconify) Layout(
 		return layout.Dimensions{}
 	}
 
-	return ic.Layout(gtx, col)
+	return ic.Layout(gtx, size, col)
 }
 
 func (i *Iconify) EnsureFallback(ctx context.Context) {
 	_, _ = i.Icon(ctx, FallbackIcon)
 }
 
-func (i *Iconify) Icon(ctx context.Context, name string) (*widget.Icon, error) {
+func (i *Iconify) Icon(ctx context.Context, name string) (*SVGIcon, error) {
 	// already cached
 	if ic, ok := i.cache[name]; ok {
 		return ic, nil
 	}
-	if _, ok := i.missing[name]; ok {
+	if until, ok := i.failedUntil[name]; ok && time.Now().Before(until) {
 		return nil, errIconNotCached
 	}
 
 	data, err := i.LoadSVG(ctx, name)
 	if err != nil {
-		i.missing[name] = struct{}{}
+		i.failedUntil[name] = time.Now().Add(5 * time.Second)
 		// fallback
 		if name != FallbackIcon {
 			return i.Icon(ctx, FallbackIcon)
@@ -82,16 +94,10 @@ func (i *Iconify) Icon(ctx context.Context, name string) (*widget.Icon, error) {
 		return nil, err
 	}
 
-	ic, err := widget.NewIcon(data)
-	if err != nil {
-		i.missing[name] = struct{}{}
-		if name != FallbackIcon {
-			return i.Icon(ctx, FallbackIcon)
-		}
-		return nil, err
-	}
+	ic := &SVGIcon{src: data}
 
 	i.cache[name] = ic
+	delete(i.failedUntil, name)
 	return ic, nil
 }
 
@@ -108,17 +114,15 @@ func (i *Iconify) LoadSVG(ctx context.Context, name string) ([]byte, error) {
 		return data, nil
 	}
 
-	// download
-	//data, err := i.download(ctx, name)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//// save (best-effort)
-	//_ = os.MkdirAll(filepath.Dir(path), 0o755)
-	//_ = os.WriteFile(path, data, 0o644)
-	//return data, nil
-	return nil, errIconNotCached
+	data, err := i.download(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// save (best-effort)
+	_ = os.MkdirAll(filepath.Dir(path), 0o755)
+	_ = os.WriteFile(path, data, 0o644)
+	return data, nil
 }
 
 func (i *Iconify) download(ctx context.Context, name string) ([]byte, error) {
@@ -196,11 +200,59 @@ func (i *Iconify) LayoutWithSize(
 		return layout.Dimensions{}
 	}
 
-	px := gtx.Dp(size)
-	gtx.Constraints.Min.X = px
-	gtx.Constraints.Min.Y = px
-	gtx.Constraints.Max.X = px
-	gtx.Constraints.Max.Y = px
+	return ic.Layout(gtx, size, col)
+}
 
-	return ic.Layout(gtx, col)
+func (ic *SVGIcon) Layout(
+	gtx layout.Context,
+	size unit.Dp,
+	col color.NRGBA,
+) layout.Dimensions {
+	px := gtx.Dp(size)
+	if px <= 0 {
+		return layout.Dimensions{}
+	}
+
+	dims := image.Pt(px, px)
+	defer clip.Rect{Max: dims}.Push(gtx.Ops).Pop()
+
+	op := ic.image(px, col)
+	op.Add(gtx.Ops)
+	paint.PaintOp{}.Add(gtx.Ops)
+
+	return layout.Dimensions{Size: dims}
+}
+
+func (ic *SVGIcon) image(sz int, col color.NRGBA) paint.ImageOp {
+	if sz == ic.imgSize && col == ic.imgColor {
+		return ic.op
+	}
+
+	img := image.NewRGBA(image.Rect(0, 0, sz, sz))
+	icon, err := oksvg.ReadIconStream(bytes.NewReader(replaceCurrentColor(ic.src, col)))
+	if err != nil {
+		ic.op = paint.NewImageOp(img)
+		ic.imgSize = sz
+		ic.imgColor = col
+		return ic.op
+	}
+
+	icon.SetTarget(0, 0, float64(sz), float64(sz))
+	scanner := rasterx.NewScannerGV(sz, sz, img, img.Bounds())
+	dasher := rasterx.NewDasher(sz, sz, scanner)
+	icon.Draw(dasher, 1)
+
+	ic.op = paint.NewImageOp(img)
+	ic.imgSize = sz
+	ic.imgColor = col
+	return ic.op
+}
+
+func replaceCurrentColor(src []byte, col color.NRGBA) []byte {
+	hex := fmt.Sprintf("#%02x%02x%02x", col.R, col.G, col.B)
+	replacer := strings.NewReplacer(
+		"currentColor", hex,
+		"currentcolor", hex,
+	)
+	return []byte(replacer.Replace(string(src)))
 }
