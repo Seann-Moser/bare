@@ -94,7 +94,7 @@ func (ts *ThemeSelector) layout(gtx layout.Context, th Theme) layout.Dimensions 
 		Axis: layout.Vertical,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return settingHeader(gtx, gioTheme, th, "Theme Mode", modeLabel(th.Mode))
+			return settingHeader(gtx, gioTheme, th, "Theme Mode", "")
 		}),
 
 		layout.Rigid(spacer(8)),
@@ -175,9 +175,12 @@ func modeButton(
 ) layout.FlexChild {
 	return layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 		b := material.Button(th, btn, label)
+		b.Background = th.Palette.Bg
+		b.Color = th.Palette.Fg
 		if selected {
 			b.Background = th.Palette.ContrastBg
 			b.Color = th.Palette.ContrastFg
+			b.TextSize = unit.Sp(15)
 		}
 		b.Inset = layout.UniformInset(unit.Dp(8))
 		return b.Layout(gtx)
@@ -212,21 +215,28 @@ func settingHeader(
 	label string,
 	current string,
 ) layout.Dimensions {
-	return layout.Flex{
-		Axis: layout.Vertical,
-	}.Layout(gtx,
+	children := []layout.FlexChild{
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			lbl := material.Body1(gioTheme, label)
 			lbl.Color = th.Color.Text
 			return lbl.Layout(gtx)
 		}),
-		layout.Rigid(spacer(4)),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			lbl := material.Body2(gioTheme, "Current: "+current)
-			lbl.Color = th.Color.TextMuted
-			return lbl.Layout(gtx)
-		}),
-	)
+	}
+
+	if current != "" {
+		children = append(children,
+			layout.Rigid(spacer(4)),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				lbl := material.Body2(gioTheme, "Current: "+current)
+				lbl.Color = th.Color.TextMuted
+				return lbl.Layout(gtx)
+			}),
+		)
+	}
+
+	return layout.Flex{
+		Axis: layout.Vertical,
+	}.Layout(gtx, children...)
 }
 
 func dropdownToggle(

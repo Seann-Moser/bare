@@ -9,6 +9,8 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op/paint"
+	"gioui.org/widget"
+	_ "golang.org/x/image/webp"
 )
 
 type ImageView struct {
@@ -76,26 +78,12 @@ func (v *ImageView) Draw(gtx layout.Context) layout.Dimensions {
 		return layout.Dimensions{}
 	}
 
-	imgSize := v.img.Bounds().Size()
-	max := gtx.Constraints.Max
-
-	scaleX := float32(max.X) / float32(imgSize.X)
-	scaleY := float32(max.Y) / float32(imgSize.Y)
-
-	scale := minFloat(scaleX, scaleY)
-	if scale > 1 {
-		scale = 1
-	}
-
-	w := int(float32(imgSize.X) * scale)
-	h := int(float32(imgSize.Y) * scale)
-
-	v.op.Add(gtx.Ops)
-	paint.PaintOp{}.Add(gtx.Ops)
-
-	return layout.Dimensions{
-		Size: image.Pt(w, h),
-	}
+	return widget.Image{
+		Src:      v.op,
+		Fit:      widget.ScaleDown,
+		Position: layout.Center,
+		Scale:    1.0 / gtx.Metric.PxPerDp,
+	}.Layout(gtx)
 }
 
 func minFloat(a, b float32) float32 {

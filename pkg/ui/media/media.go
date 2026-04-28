@@ -5,9 +5,10 @@ import "time"
 type Kind string
 
 const (
-	KindImage Kind = "image"
-	KindAudio Kind = "audio"
-	KindVideo Kind = "video"
+	KindImage    Kind = "image"
+	KindAudio    Kind = "audio"
+	KindVideo    Kind = "video"
+	KindDocument Kind = "document"
 )
 
 type State string

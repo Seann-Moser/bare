@@ -1,9 +1,11 @@
 package media
 
 import (
+	"context"
 	"fmt"
 
 	"gioui.org/layout"
+	"gioui.org/widget/material"
 	"github.com/Seann-Moser/bare/pkg/ui/themes"
 )
 
@@ -11,9 +13,11 @@ type MediaView struct {
 	Kind Kind
 	Path string
 
-	Image    ImageView
-	Player   Player
-	Controls *MediaControls
+	Image     ImageView
+	Poster    ImageView
+	Player    Player
+	Controls  *MediaControls
+	LastError error
 }
 
 func NewMediaView(player Player) *MediaView {
@@ -29,16 +33,30 @@ func (v *MediaView) Load(kind Kind, path string) error {
 
 	switch kind {
 	case KindImage:
+		v.LastError = nil
 		return v.Image.Load(path)
 
 	case KindAudio, KindVideo:
 		if v.Player == nil {
-			return fmt.Errorf("no media player backend configured")
+			v.LastError = fmt.Errorf("no media player backend configured")
+			return v.LastError
 		}
-		return v.Player.Load(path)
+		if kind == KindVideo {
+			if thumb, err := extractVideoThumbnail(context.Background(), path); err == nil {
+				_ = v.Poster.Load(thumb)
+			}
+		}
+		err := v.Player.Load(path)
+		v.LastError = err
+		return err
+
+	case KindDocument:
+		v.LastError = nil
+		return nil
 
 	default:
-		return fmt.Errorf("unsupported media kind %q", kind)
+		v.LastError = fmt.Errorf("unsupported media kind %q", kind)
+		return v.LastError
 	}
 }
 
@@ -47,8 +65,37 @@ func (v *MediaView) Layout(gtx layout.Context, th themes.Theme) layout.Dimension
 	case KindImage:
 		return v.Image.Draw(gtx)
 
-	case KindAudio, KindVideo:
-		return v.Controls.Layout(gtx, th, v.Player)
+	case KindVideo:
+		return layout.Flex{
+			Axis: layout.Vertical,
+		}.Layout(gtx,
+			layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+				if v.Poster.img != nil {
+					return v.Poster.Draw(gtx)
+				}
+				return layout.Dimensions{}
+			}),
+			layout.Rigid(spacerH(12)),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return v.Controls.Layout(gtx, th, v.Player)
+			}),
+		)
+
+	case KindAudio:
+		return layout.Flex{
+			Axis: layout.Vertical,
+		}.Layout(gtx,
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return material.Body1(th.Gio(), "Audio Preview").Layout(gtx)
+			}),
+			layout.Rigid(spacerH(12)),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return v.Controls.Layout(gtx, th, v.Player)
+			}),
+		)
+
+	case KindDocument:
+		return layout.Dimensions{}
 
 	default:
 		return layout.Dimensions{}
