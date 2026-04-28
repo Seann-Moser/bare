@@ -1,341 +1,152 @@
-Here’s a clean, developer-friendly `README.md` you can drop into your `gio-ui` package. It documents all the components you’ve built and keeps things structured for reuse.
+# bare
 
----
+`bare` is a Gio-based desktop UI workspace. It currently includes a runnable dashboard app plus a reusable set of UI packages for themes, icons, text widgets, file browsing, and media preview.
 
-# 🧩 Gio UI Components Library
+The repo is split between:
 
-A reusable UI component library built on top of **Gio**, focused on:
+- an app entrypoint in `main.go` / `cmd`
+- a dashboard example in `apps/dashboard`
+- reusable UI packages under `pkg/ui`
 
-* Clean theming (light/dark/system)
-* Composable components
-* Minimal dependencies
-* Desktop-first ergonomics (Linux-friendly)
+## Current State
 
----
+The most complete path in the repo today is the desktop dashboard launched with the `gui` command. That dashboard exercises the shared UI packages and includes:
 
-## ✨ Features
+- a themed app shell with sidebar and topbar
+- tabs, buttons, dropdowns, and modal overlays
+- a file browser with filtering, sorting, and preview panes
+- text viewer and editor widgets
+- image, audio, and video preview support
+- persistent theme selection
 
-* 🎨 Theme system (light / dark / system)
-* 🧱 Reusable UI components
-* 🎯 Iconify icon support (with caching)
-* 🗂 File browser
-* 🧭 Tabs / navigation
-* 🪟 Modal + popout windows
-* 📝 Text viewer + editor
-* 🔘 Buttons with icons
-* 🎵 Media (image/audio/video UI layer)
+Some Cobra command descriptions are still scaffold text, so the code is a more reliable source of truth than the generated command help.
 
----
+## Run
 
-## 📦 Installation
+Build the module:
 
 ```bash
-go get your/module/ui
+go build ./...
 ```
 
----
+Launch the dashboard:
 
-## 🎨 Theme System
-
-```go
-th := theme.New(theme.ModeSystem, theme.PaletteOcean, systemDark)
-gioTheme := th.Gio()
+```bash
+go run . gui
 ```
 
-### Modes
+You can also build the binary and run:
 
-* `ModeLight`
-* `ModeDark`
-* `ModeSystem`
-
-### Palettes
-
-* Sunset
-* Coastal
-* Sky
-* Blush
-* Ocean
-* Pastel
-
----
-
-## 🎛 Theme Selector Component
-
-```go
-selector := theme.NewThemeSelector()
-
-th, dims := selector.LayoutThemeSelector(gtx, th, systemDark)
+```bash
+./bare gui
 ```
 
----
+## Runtime Requirements
 
-## 🎯 Iconify Icons
+This repo is pure Go at build time, but some features expect external tools at runtime:
 
-Icons auto-download + cache to:
+- `mpv` for media playback control in the file browser preview
+- `ffprobe` for media duration and video metadata
+- `ffmpeg` for video thumbnails
+- network access on first icon load, because `pkg/ui/icons` fetches SVGs from Iconify and caches them locally
 
-```txt
-~/.config/icons/iconify/
+Cached and persisted data is stored in standard user directories:
+
+- theme config: `~/.config/bare/theme.yaml`
+- icon cache: `~/.cache/icons/iconify/`
+- media cache and sockets: `~/.cache/bare/`
+
+## Package Guide
+
+### `apps/dashboard`
+
+The dashboard is the main example app in the repo. It wires together the shared UI packages into a desktop shell with overview, file, log, media, and settings surfaces.
+
+### `pkg/ui`
+
+Shared Gio widgets and layout helpers used by the dashboard:
+
+- `Button`
+- `Dropdown`
+- `Modal`
+- `Tabs`
+- `Topbar`
+- `AppShell`
+
+See [pkg/ui/README.md](/home/n9s/go/src/github.com/Seann-Moser/bare/pkg/ui/README.md).
+
+### `pkg/ui/themes`
+
+Theme construction, palette selection, Gio `material.Theme` integration, and config persistence.
+
+Features:
+
+- `light`, `dark`, and `system` modes
+- palette presets: `sunset`, `coastal`, `sky`, `blush`, `ocean`, `pastel`
+- theme selector widget
+- config load/save helpers
+
+See [pkg/ui/themes/README.md](/home/n9s/go/src/github.com/Seann-Moser/bare/pkg/ui/themes/README.md).
+
+### `pkg/ui/icons`
+
+Iconify-backed icon loading for Gio. Icons are fetched as SVG, cached locally, and rasterized for painting.
+
+See [pkg/ui/icons/README.md](/home/n9s/go/src/github.com/Seann-Moser/bare/pkg/ui/icons/README.md).
+
+### `pkg/ui/text`
+
+Text-oriented widgets and helpers:
+
+- `TextView` for structured text blocks
+- `TextEditor` for multiline editing
+- `SelectableTextBlock`
+- `ParseSimpleRichText` for lightweight formatted text parsing
+
+See [pkg/ui/text/README.md](/home/n9s/go/src/github.com/Seann-Moser/bare/pkg/ui/text/README.md).
+
+### `pkg/ui/filemanager`
+
+A file browser widget with:
+
+- path navigation
+- search and sorting
+- hidden file toggling
+- directory and file selection
+- text and media preview
+
+The file browser currently acts as one of the main integration points for the media and text packages.
+
+### `pkg/ui/media`
+
+Media preview primitives used by the file browser:
+
+- image preview
+- inline video playback
+- audio/video controls
+- `Player` abstraction with an `mpv`-backed implementation
+
+## Repo Layout
+
+```text
+.
+├── apps/dashboard
+├── cmd
+├── main.go
+└── pkg
+    ├── app
+    └── ui
+        ├── filemanager
+        ├── icons
+        ├── media
+        ├── text
+        ├── themes
+        └── utils
 ```
 
-### Usage
-
-```go
-icons := icons.NewIconify()
-
-icons.Layout(gtx, "mdi:home", unit.Dp(24), th.Color.Text)
-```
-
-### Fallback
-
-If icon fails:
-
-```go
-subway:missing
-```
-
----
-
-## 🔘 Button Component
-
-Supports:
-
-* Prefix icon
-* Suffix icon
-* Icon-only mode
-* Variants
-
-```go
-btn := components.Button{
-	Text:    "Save",
-	Prefix:  "mdi:content-save",
-	Suffix:  "mdi:chevron-right",
-	Variant: components.ButtonPrimary,
-}
-
-btn.Layout(gtx, th, icons)
-```
-
----
-
-## 🧭 Tabs / Navbar
-
-```go
-tabs := components.NewTabs([]components.TabItem{
-	{ID: "home", Label: "Home", Icon: "mdi:home"},
-	{ID: "settings", Label: "Settings", Icon: "mdi:cog"},
-}, "home")
-
-tabs.Layout(gtx, th, icons)
-
-selected := tabs.Selected()
-```
-
----
-
-## 🪟 Modal
-
-Overlay UI rendered in same window.
-
-```go
-modal.Open = true
-
-modal.Layout(gtx, th, "Title", func(gtx layout.Context) layout.Dimensions {
-	return material.Body1(th.Gio(), "Content").Layout(gtx)
-})
-```
-
----
-
-## 🧱 Popout Window
-
-Separate OS window:
-
-```go
-OpenPopout("Preview", th, func(gtx layout.Context) layout.Dimensions {
-	return material.Body1(th.Gio(), "Hello").Layout(gtx)
-})
-```
-
----
-
-## 📝 Text View (Rich Display)
-
-Supports:
-
-* headings
-* code blocks
-* muted text
-* auto-scroll
-
-```go
-view := components.NewTextView()
-
-view.SetBlocks(ParseSimpleRichText(text))
-view.Layout(gtx, th)
-```
-
----
-
-## ✏️ Text Editor
-
-```go
-editor := components.NewTextEditor("Write something...")
-
-editor.Layout(gtx, th)
-
-text := editor.Text()
-selected := editor.SelectedText()
-```
-
-### Notes
-
-* Scrolls automatically when height constrained
-* Supports selection tracking
-
----
-
-## 📂 File Browser
-
-Supports:
-
-* directory navigation
-* filtering
-* file selection
-* icons
-
-```go
-browser := components.NewFileBrowser("")
-
-browser.Extensions = []string{".png", ".jpg", ".mp4"}
-
-browser.Layout(gtx, th, icons)
-
-selected := browser.SelectedPath
-```
-
----
-
-## 🖼 Image Viewer
-
-```go
-img := components.ImageView{}
-img.Load("/path/to/image.png")
-
-img.Draw(gtx)
-```
-
----
-
-## 🎵 Media Player (UI Layer)
-
-Includes:
-
-* Play / Pause / Stop
-* Seek
-* Volume
-
-```go
-controls := components.NewMediaControls()
-
-controls.Layout(gtx, th, player)
-```
-
-### Backend
-
-Media playback is abstracted:
-
-```go
-type Player interface {
-	Load(path string)
-	Play()
-	Pause()
-	Seek()
-}
-```
-
-Recommended backends:
-
-* mpv (best for Linux)
-* ffmpeg
-* gstreamer
-
----
-
-## 🧩 Media View
-
-```go
-view := media.NewMediaView(player)
-
-view.Load(media.KindVideo, "/video.mp4")
-view.Layout(gtx, th)
-```
-
----
-
-## 🧠 Architecture Notes
-
-### Gio Philosophy
-
-* No implicit state
-* Layout is explicit
-* Scrolling must be opt-in
-
-### This library follows:
-
-* Stateless rendering where possible
-* Explicit state structs
-* Separation of:
-
-    * UI (components)
-    * logic (theme/media/icons)
-
----
-
-## 🚀 Suggested Next Steps
-
-* Theme persistence (save to disk)
-* Window manager for popouts
-* Virtualized lists (large file dirs / chat logs)
-* Keyboard navigation support
-* Drag + drop (files / UI panels)
-
----
-
-## ⚠️ Limitations
-
-* Rich text editing is **not fully supported** (viewer only)
-* Media playback requires external backend
-* System font loading must be implemented manually
-
----
-
-## 🤝 Contributing
-
-PRs welcome. Keep components:
-
-* small
-* composable
-* dependency-light
-
----
-
-## 🧵 Example App Structure
-
-```txt
-ui/
-  theme/
-  components/
-  icons/
-  media/
-
-app/
-  main.go
-```
-
----
-
-If you want, I can next:
-
-* turn this into a proper Go module with examples
-* generate a demo app (like Storybook for Gio)
-* or build a full “dashboard UI” using all components together
+## Notes For Development
+
+- The root module path is `github.com/Seann-Moser/bare`.
+- The repo vendors its dependencies under `vendor/`.
+- The dashboard window title is currently `Gio Dashboard`.
+- The `gui --file` flag exists, but the dashboard launch path does not currently use it.
