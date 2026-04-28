@@ -5,6 +5,7 @@ import (
 	"image/color"
 
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
@@ -70,20 +71,6 @@ func (b *Button) Layout(
 
 	return b.Clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints.Min.X = 0
-
-		macro := clip.RRect{
-			Rect: image.Rectangle{
-				Max: gtx.Constraints.Max,
-			},
-			SE: gtx.Dp(unit.Dp(th.Radius.MD)),
-			SW: gtx.Dp(unit.Dp(th.Radius.MD)),
-			NW: gtx.Dp(unit.Dp(th.Radius.MD)),
-			NE: gtx.Dp(unit.Dp(th.Radius.MD)),
-		}.Push(gtx.Ops)
-
-		if bg.A > 0 {
-			paint.Fill(gtx.Ops, bg)
-		}
 		var ce []layout.FlexChild
 		if b.Icon {
 			ce = []layout.FlexChild{
@@ -97,6 +84,7 @@ func (b *Button) Layout(
 			}
 		}
 
+		macro := op.Record(gtx.Ops)
 		dims := layout.Inset{
 			Top:    unit.Dp(12),
 			Bottom: unit.Dp(12),
@@ -111,8 +99,22 @@ func (b *Button) Layout(
 				ce...,
 			)
 		})
+		call := macro.Stop()
 
-		macro.Pop()
+		if bg.A > 0 {
+			paint.FillShape(
+				gtx.Ops,
+				bg,
+				clip.RRect{
+					Rect: image.Rectangle{Max: dims.Size},
+					SE:   gtx.Dp(unit.Dp(th.Radius.MD)),
+					SW:   gtx.Dp(unit.Dp(th.Radius.MD)),
+					NW:   gtx.Dp(unit.Dp(th.Radius.MD)),
+					NE:   gtx.Dp(unit.Dp(th.Radius.MD)),
+				}.Op(gtx.Ops),
+			)
+		}
+		call.Add(gtx.Ops)
 
 		return dims
 	})

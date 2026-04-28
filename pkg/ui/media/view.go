@@ -63,6 +63,9 @@ func (v *MediaView) Load(kind Kind, path string) error {
 func (v *MediaView) Layout(gtx layout.Context, th themes.Theme) layout.Dimensions {
 	switch v.Kind {
 	case KindImage:
+		if v.Image.Loading() {
+			return material.Body2(th.Gio(), "Loading image preview...").Layout(gtx)
+		}
 		return v.Image.Draw(gtx)
 
 	case KindVideo:
