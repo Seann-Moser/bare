@@ -2,10 +2,16 @@ package themes
 
 import (
 	"image/color"
+	"sync"
 
 	"gioui.org/font"
 	"gioui.org/text"
 	"gioui.org/widget/material"
+)
+
+var (
+	defaultShaperOnce sync.Once
+	defaultShaper     *text.Shaper
 )
 
 type RawPalette struct {
@@ -23,29 +29,32 @@ type Theme struct {
 }
 
 func (t Theme) Gio() *material.Theme {
-	shaper := text.NewShaper(text.WithCollection(loadFonts()))
-	return &material.Theme{
-		Shaper: shaper,
-		Palette: material.Palette{
-			Bg:         t.Color.Background,
-			Fg:         t.Color.Text,
-			ContrastBg: t.Color.Primary,
-			ContrastFg: readableOn(t.Color.Primary),
-		},
-	}
+	return newMaterialTheme(defaultThemeShaper(), t)
+}
+
+func defaultThemeShaper() *text.Shaper {
+	defaultShaperOnce.Do(func() {
+		defaultShaper = text.NewShaper(text.WithCollection(loadFonts()))
+	})
+
+	return defaultShaper
 }
 
 func (t Theme) GioFont(fonts []font.FontFace) *material.Theme {
-	shaper := text.NewShaper(text.WithCollection(fonts))
-	return &material.Theme{
-		Shaper: shaper,
-		Palette: material.Palette{
-			Bg:         t.Color.Background,
-			Fg:         t.Color.Text,
-			ContrastBg: t.Color.Primary,
-			ContrastFg: readableOn(t.Color.Primary),
-		},
+	return newMaterialTheme(text.NewShaper(text.WithCollection(fonts)), t)
+}
+
+func newMaterialTheme(shaper *text.Shaper, t Theme) *material.Theme {
+	mt := material.NewTheme()
+	mt.Shaper = shaper
+	mt.Palette = material.Palette{
+		Bg:         t.Color.Background,
+		Fg:         t.Color.Text,
+		ContrastBg: t.Color.Primary,
+		ContrastFg: readableOn(t.Color.Primary),
 	}
+
+	return mt
 }
 
 type ColorTokens struct {

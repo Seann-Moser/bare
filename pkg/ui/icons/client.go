@@ -2,6 +2,7 @@ package icons
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"image/color"
 	"io"
@@ -18,11 +19,14 @@ import (
 
 const FallbackIcon = "subway:missing"
 
+var errIconNotCached = errors.New("icon not cached locally")
+
 type Iconify struct {
 	CacheDir string
 	Client   *http.Client
 
-	cache map[string]*widget.Icon
+	cache   map[string]*widget.Icon
+	missing map[string]struct{}
 }
 
 func NewIconify() *Iconify {
@@ -36,7 +40,8 @@ func NewIconify() *Iconify {
 		Client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		cache: map[string]*widget.Icon{},
+		cache:   map[string]*widget.Icon{},
+		missing: map[string]struct{}{},
 	}
 }
 
@@ -63,9 +68,13 @@ func (i *Iconify) Icon(ctx context.Context, name string) (*widget.Icon, error) {
 	if ic, ok := i.cache[name]; ok {
 		return ic, nil
 	}
+	if _, ok := i.missing[name]; ok {
+		return nil, errIconNotCached
+	}
 
 	data, err := i.LoadSVG(ctx, name)
 	if err != nil {
+		i.missing[name] = struct{}{}
 		// fallback
 		if name != FallbackIcon {
 			return i.Icon(ctx, FallbackIcon)
@@ -75,6 +84,7 @@ func (i *Iconify) Icon(ctx context.Context, name string) (*widget.Icon, error) {
 
 	ic, err := widget.NewIcon(data)
 	if err != nil {
+		i.missing[name] = struct{}{}
 		if name != FallbackIcon {
 			return i.Icon(ctx, FallbackIcon)
 		}
@@ -86,6 +96,8 @@ func (i *Iconify) Icon(ctx context.Context, name string) (*widget.Icon, error) {
 }
 
 func (i *Iconify) LoadSVG(ctx context.Context, name string) ([]byte, error) {
+	_ = ctx
+
 	path, err := i.cachePath(name)
 	if err != nil {
 		return nil, err
@@ -97,16 +109,16 @@ func (i *Iconify) LoadSVG(ctx context.Context, name string) ([]byte, error) {
 	}
 
 	// download
-	data, err := i.download(ctx, name)
-	if err != nil {
-		return nil, err
-	}
-
-	// save (best-effort)
-	_ = os.MkdirAll(filepath.Dir(path), 0o755)
-	_ = os.WriteFile(path, data, 0o644)
-
-	return data, nil
+	//data, err := i.download(ctx, name)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//// save (best-effort)
+	//_ = os.MkdirAll(filepath.Dir(path), 0o755)
+	//_ = os.WriteFile(path, data, 0o644)
+	//return data, nil
+	return nil, errIconNotCached
 }
 
 func (i *Iconify) download(ctx context.Context, name string) ([]byte, error) {

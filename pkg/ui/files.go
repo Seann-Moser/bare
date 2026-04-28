@@ -28,6 +28,11 @@ type FileBrowser struct {
 	List layout.List
 
 	rows map[string]*widget.Clickable
+
+	cachedEntries    []FileEntry
+	cachedDir        string
+	cachedShowHidden bool
+	cachedExtKey     string
 }
 
 type FileEntry struct {
@@ -62,6 +67,7 @@ func (b *FileBrowser) Layout(
 			if entry.IsDir {
 				b.Dir = entry.Path
 				b.SelectedPath = ""
+				b.invalidateEntries()
 			} else {
 				b.SelectedPath = entry.Path
 			}
@@ -74,7 +80,7 @@ func (b *FileBrowser) Layout(
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return material.Body2(th.Gio(), b.Dir).Layout(gtx)
 		}),
-		layout.Rigid(spacerH(8)),
+		layout.Rigid(SpacerH(8)),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			return b.List.Layout(gtx, len(entries), func(gtx layout.Context, index int) layout.Dimensions {
 				return b.layoutRow(gtx, th, ic, entries[index])
@@ -84,6 +90,22 @@ func (b *FileBrowser) Layout(
 }
 
 func (b *FileBrowser) entries() ([]FileEntry, error) {
+	if b.entriesDirty() {
+		entries, err := b.readEntries()
+		if err != nil {
+			return nil, err
+		}
+
+		b.cachedEntries = entries
+		b.cachedDir = b.Dir
+		b.cachedShowHidden = b.ShowHidden
+		b.cachedExtKey = b.extensionsKey()
+	}
+
+	return b.cachedEntries, nil
+}
+
+func (b *FileBrowser) readEntries() ([]FileEntry, error) {
 	items, err := os.ReadDir(b.Dir)
 	if err != nil {
 		return nil, err
@@ -134,6 +156,25 @@ func (b *FileBrowser) entries() ([]FileEntry, error) {
 	})
 
 	return entries, nil
+}
+
+func (b *FileBrowser) entriesDirty() bool {
+	return b.cachedEntries == nil ||
+		b.cachedDir != b.Dir ||
+		b.cachedShowHidden != b.ShowHidden ||
+		b.cachedExtKey != b.extensionsKey()
+}
+
+func (b *FileBrowser) invalidateEntries() {
+	b.cachedEntries = nil
+}
+
+func (b *FileBrowser) extensionsKey() string {
+	if len(b.Extensions) == 0 {
+		return ""
+	}
+
+	return strings.Join(b.Extensions, "\x00")
 }
 
 func (b *FileBrowser) allowedExt(path string) bool {

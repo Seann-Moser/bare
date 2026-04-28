@@ -30,8 +30,14 @@ func spacer(dp unit.Dp) layout.Widget {
 	}
 }
 
-func spacerH(dp unit.Dp) layout.Widget {
+func SpacerH(dp unit.Dp) layout.Widget {
 	return func(gtx layout.Context) layout.Dimensions {
 		return layout.Dimensions{Size: image.Pt(0, gtx.Dp(dp))}
+	}
+}
+
+func SpacerW(dp unit.Dp) layout.Widget {
+	return func(gtx layout.Context) layout.Dimensions {
+		return layout.Dimensions{Size: image.Pt(gtx.Dp(dp), 0)}
 	}
 }

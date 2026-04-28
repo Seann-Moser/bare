@@ -36,6 +36,16 @@ func Execute() {
 	}
 }
 
+func IsGUICommand(args []string) bool {
+	for _, arg := range args {
+		if len(arg) > 0 && arg[0] == '-' {
+			continue
+		}
+		return arg == "gui"
+	}
+	return false
+}
+
 func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
@@ -47,5 +57,4 @@ func init() {
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
-
 

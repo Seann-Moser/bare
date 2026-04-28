@@ -23,7 +23,7 @@ const (
 )
 
 type Button struct {
-	Clickable widget.Clickable
+	Clickable *widget.Clickable
 	Icon      bool
 	Text      string
 	Prefix    string // example: "mdi:plus"
@@ -33,6 +33,9 @@ type Button struct {
 }
 
 func (b *Button) Clicked(gtx layout.Context) bool {
+	if b.Clickable == nil {
+		return false
+	}
 	return b.Clickable.Clicked(gtx)
 }
 
@@ -55,6 +58,14 @@ func (b *Button) Layout(
 	default:
 		bg = th.Color.Primary
 		fg = readableOn(th.Color.Primary)
+	}
+
+	if b.Clickable != nil && b.Clickable.Hovered() {
+		bg = buttonHoverColor(bg, th, b.Variant)
+	}
+
+	if b.Clickable == nil {
+		return layout.Dimensions{}
 	}
 
 	return b.Clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -86,7 +97,12 @@ func (b *Button) Layout(
 			}
 		}
 
-		dims := layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		dims := layout.Inset{
+			Top:    unit.Dp(12),
+			Bottom: unit.Dp(12),
+			Left:   unit.Dp(14),
+			Right:  unit.Dp(14),
+		}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{
 				Axis:      layout.Horizontal,
 				Alignment: layout.Middle,
@@ -100,6 +116,17 @@ func (b *Button) Layout(
 
 		return dims
 	})
+}
+
+func buttonHoverColor(bg color.NRGBA, th themes.Theme, variant ButtonVariant) color.NRGBA {
+	switch variant {
+	case ButtonGhost:
+		return themes.Mix(th.Color.SurfaceAlt, th.Color.Background, 0.55)
+	case ButtonSecondary:
+		return themes.Mix(th.Color.Primary, bg, 0.18)
+	default:
+		return themes.Mix(th.Color.Accent, bg, 0.2)
+	}
 }
 
 func iconChild(
@@ -116,8 +143,8 @@ func iconChild(
 
 	return layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 		return layout.Inset{
-			Right: unit.Dp(6),
-			Left:  unit.Dp(6),
+			Right: unit.Dp(8),
+			Left:  unit.Dp(8),
 		}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 			return ic.Layout(gtx, name, size, col)
 		})
