@@ -150,7 +150,8 @@ func (ts *ThemeSelector) paletteDropdown(
 	offset := op.Offset(image.Pt(0, dims.Size.Y+gtx.Dp(unit.Dp(10)))).Push(gtx.Ops)
 
 	menuGTX := gtx
-	menuGTX.Constraints.Min = image.Point{}
+	menuGTX.Constraints.Min = image.Pt(dims.Size.X, 0)
+	menuGTX.Constraints.Max.X = dims.Size.X
 
 	dropdownSurface(menuGTX, th, func(gtx layout.Context) layout.Dimensions {
 		return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
@@ -193,6 +194,7 @@ func paletteButton(
 	selected bool,
 ) layout.FlexChild {
 	return layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+		gtx.Constraints.Min.X = gtx.Constraints.Max.X
 		label := paletteLabel(p.Name)
 
 		b := material.Button(th, btn, label)

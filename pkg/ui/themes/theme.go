@@ -59,6 +59,96 @@ var Palettes = map[PaletteName]RawPalette{
 			Hex("#A3CCDA"),
 		},
 	},
+	PaletteWarmEarth: {
+		Name: PaletteWarmEarth,
+		Colors: [4]color.NRGBA{
+			Hex("#A47251"),
+			Hex("#DD9E59"),
+			Hex("#F0D8A1"),
+			Hex("#DCF0C3"),
+		},
+	},
+	PaletteSoftNeutral: {
+		Name: PaletteSoftNeutral,
+		Colors: [4]color.NRGBA{
+			Hex("#A98B76"),
+			Hex("#BFA28C"),
+			Hex("#F3E4C9"),
+			Hex("#BABF94"),
+		},
+	},
+	PaletteLavender: {
+		Name: PaletteLavender,
+		Colors: [4]color.NRGBA{
+			Hex("#F2EAE0"),
+			Hex("#B4D3D9"),
+			Hex("#BDA6CE"),
+			Hex("#9B8EC7"),
+		},
+	},
+	PaletteHarvest: {
+		Name: PaletteHarvest,
+		Colors: [4]color.NRGBA{
+			Hex("#758A93"),
+			Hex("#ECD5BC"),
+			Hex("#E9B63B"),
+			Hex("#C66E52"),
+		},
+	},
+	PaletteCandy: {
+		Name: PaletteCandy,
+		Colors: [4]color.NRGBA{
+			Hex("#CDF0EA"),
+			Hex("#F9F9F9"),
+			Hex("#F6C6EA"),
+			Hex("#C490E4"),
+		},
+	},
+	PaletteCreamyPop: {
+		Name: PaletteCreamyPop,
+		Colors: [4]color.NRGBA{
+			Hex("#FFFFC1"),
+			Hex("#FFD2A5"),
+			Hex("#D38CAD"),
+			Hex("#8A79AF"),
+		},
+	},
+	PaletteViolet: {
+		Name: PaletteViolet,
+		Colors: [4]color.NRGBA{
+			Hex("#BEDCFA"),
+			Hex("#98ACF8"),
+			Hex("#B088F9"),
+			Hex("#DA9FF9"),
+		},
+	},
+	PaletteForestPop: {
+		Name: PaletteForestPop,
+		Colors: [4]color.NRGBA{
+			Hex("#C0D8C0"),
+			Hex("#F5EEDC"),
+			Hex("#DD4A48"),
+			Hex("#ECB390"),
+		},
+	},
+	PaletteDarkAccent: {
+		Name: PaletteDarkAccent,
+		Colors: [4]color.NRGBA{
+			Hex("#DDDDDD"),
+			Hex("#222831"),
+			Hex("#30475E"),
+			Hex("#F05454"),
+		},
+	},
+	PaletteRetro: {
+		Name: PaletteRetro,
+		Colors: [4]color.NRGBA{
+			Hex("#F6BED6"),
+			Hex("#E79CC2"),
+			Hex("#1D1B38"),
+			Hex("#336D88"),
+		},
+	},
 }
 
 func New(mode Mode, paletteName PaletteName, systemDark bool) Theme {

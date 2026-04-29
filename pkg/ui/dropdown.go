@@ -59,9 +59,11 @@ func (d *Dropdown) Layout(
 		return dims
 	}
 
+	menuWidth := dims.Size.X
+
 	x := 0
 	if d.AlignRight {
-		x = dims.Size.X - gtx.Dp(d.width())
+		x = dims.Size.X - menuWidth
 		if x < 0 {
 			x = 0
 		}
@@ -73,7 +75,7 @@ func (d *Dropdown) Layout(
 	menuGTX := gtx
 	menuGTX.Constraints.Min = image.Point{}
 	menuGTX.Constraints.Max = image.Pt(
-		gtx.Dp(d.width()),
+		menuWidth,
 		gtx.Dp(d.maxHeight()),
 	)
 

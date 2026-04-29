@@ -30,6 +30,7 @@ type Button struct {
 	Text      string
 	Prefix    string // example: "mdi:plus"
 	Suffix    string // example: "mdi:chevron-right"
+	FullWidth bool
 
 	Variant ButtonVariant
 }
@@ -72,6 +73,9 @@ func (b *Button) Layout(
 
 	return b.Clickable.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 		gtx.Constraints.Min.X = 0
+		if b.FullWidth {
+			gtx.Constraints.Min.X = gtx.Constraints.Max.X
+		}
 		var ce []layout.FlexChild
 		if b.Icon {
 			ce = []layout.FlexChild{
@@ -80,7 +84,7 @@ func (b *Button) Layout(
 		} else {
 			ce = []layout.FlexChild{
 				iconChild(ic, b.Prefix, unit.Dp(18), fg),
-				labelChild(th, b.Text, fg),
+				labelChild(th, b.Text, fg, b.FullWidth),
 				iconChild(ic, b.Suffix, unit.Dp(18), fg),
 			}
 		}
@@ -158,6 +162,7 @@ func labelChild(
 	th themes.Theme,
 	text string,
 	col color.NRGBA,
+	fullWidth bool,
 ) layout.FlexChild {
 	if text == "" {
 		return layout.Rigid(func(gtx layout.Context) layout.Dimensions {
@@ -165,10 +170,16 @@ func labelChild(
 		})
 	}
 
-	return layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+	child := func(gtx layout.Context) layout.Dimensions {
 		gt := th.Gio()
 		lbl := material.Body1(gt, text)
 		lbl.Color = col
 		return lbl.Layout(gtx)
-	})
+	}
+
+	if fullWidth {
+		return layout.Flexed(1, child)
+	}
+
+	return layout.Rigid(child)
 }

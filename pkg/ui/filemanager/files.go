@@ -343,6 +343,7 @@ func (b *FileBrowser) layoutSortOption(
 		btn := ui.Button{
 			Clickable: b.sortOptions[mode],
 			Text:      sortModeLabel(mode),
+			FullWidth: true,
 			Variant:   variant,
 		}
 		return btn.Layout(gtx, th, ic)
