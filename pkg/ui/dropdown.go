@@ -61,6 +61,10 @@ func (d *Dropdown) Layout(
 	}
 
 	menuWidth := dims.Size.X
+	configuredWidth := gtx.Dp(d.width())
+	if configuredWidth > menuWidth {
+		menuWidth = configuredWidth
+	}
 
 	x := 0
 	if d.AlignRight {
