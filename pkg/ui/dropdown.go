@@ -46,47 +46,45 @@ func (d *Dropdown) Layout(
 		suffix = "mdi:chevron-up"
 	}
 
-	return layout.Stack{}.Layout(gtx,
-		layout.Stacked(func(gtx layout.Context) layout.Dimensions {
-			btn := Button{
-				Clickable: &d.Toggle,
-				Text:      label,
-				Prefix:    d.Prefix,
-				Suffix:    suffix,
-				Variant:   d.variant(),
-			}
-			return btn.Layout(gtx, th, ic)
-		}),
-		layout.Expanded(func(gtx layout.Context) layout.Dimensions {
-			if !d.Open || menu == nil {
-				return layout.Dimensions{}
-			}
+	btn := Button{
+		Clickable: &d.Toggle,
+		Text:      label,
+		Prefix:    d.Prefix,
+		Suffix:    suffix,
+		Variant:   d.variant(),
+	}
+	dims := btn.Layout(gtx, th, ic)
 
-			x := 0
-			if d.AlignRight {
-				x = gtx.Constraints.Max.X - gtx.Dp(d.width())
-				if x < 0 {
-					x = 0
-				}
-			}
+	if !d.Open || menu == nil {
+		return dims
+	}
 
-			offset := op.Offset(image.Pt(x, gtx.Dp(d.offsetY()))).Push(gtx.Ops)
-			defer offset.Pop()
+	x := 0
+	if d.AlignRight {
+		x = dims.Size.X - gtx.Dp(d.width())
+		if x < 0 {
+			x = 0
+		}
+	}
 
-			menuGTX := gtx
-			menuGTX.Constraints.Min = image.Point{}
-			menuGTX.Constraints.Max = image.Pt(
-				gtx.Dp(d.width()),
-				gtx.Dp(d.maxHeight()),
-			)
+	macro := op.Record(gtx.Ops)
+	offset := op.Offset(image.Pt(x, gtx.Dp(d.offsetY()))).Push(gtx.Ops)
 
-			utils.Panel(menuGTX, th.Color.Surface, unit.Dp(th.Radius.MD), func(gtx layout.Context) layout.Dimensions {
-				return layout.UniformInset(unit.Dp(8)).Layout(gtx, menu)
-			})
-
-			return layout.Dimensions{}
-		}),
+	menuGTX := gtx
+	menuGTX.Constraints.Min = image.Point{}
+	menuGTX.Constraints.Max = image.Pt(
+		gtx.Dp(d.width()),
+		gtx.Dp(d.maxHeight()),
 	)
+
+	utils.Panel(menuGTX, th.Color.Surface, unit.Dp(th.Radius.MD), func(gtx layout.Context) layout.Dimensions {
+		return layout.UniformInset(unit.Dp(8)).Layout(gtx, menu)
+	})
+
+	offset.Pop()
+	op.Defer(gtx.Ops, macro.Stop())
+
+	return dims
 }
 
 func (d *Dropdown) width() unit.Dp {

@@ -1,9 +1,11 @@
 package themes
 
 import (
+	"image"
 	"sort"
 
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
@@ -139,30 +141,29 @@ func (ts *ThemeSelector) paletteDropdown(
 	gioTheme *material.Theme,
 	th Theme,
 ) layout.Dimensions {
-	return layout.Flex{
-		Axis: layout.Vertical,
-	}.Layout(gtx,
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return dropdownToggle(gtx, gioTheme, th, &ts.PaletteToggle, ts.PaletteOpen, paletteLabel(th.Palette))
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			if !ts.PaletteOpen {
-				return layout.Dimensions{}
-			}
+	dims := dropdownToggle(gtx, gioTheme, th, &ts.PaletteToggle, ts.PaletteOpen, paletteLabel(th.Palette))
+	if !ts.PaletteOpen {
+		return dims
+	}
 
-			return layout.Inset{
-				Top: unit.Dp(10),
-			}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return dropdownSurface(gtx, th, func(gtx layout.Context) layout.Dimensions {
-					return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						return layout.Flex{
-							Axis: layout.Vertical,
-						}.Layout(gtx, ts.genLayout(gioTheme, th)...)
-					})
-				})
-			})
-		}),
-	)
+	macro := op.Record(gtx.Ops)
+	offset := op.Offset(image.Pt(0, dims.Size.Y+gtx.Dp(unit.Dp(10)))).Push(gtx.Ops)
+
+	menuGTX := gtx
+	menuGTX.Constraints.Min = image.Point{}
+
+	dropdownSurface(menuGTX, th, func(gtx layout.Context) layout.Dimensions {
+		return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			return layout.Flex{
+				Axis: layout.Vertical,
+			}.Layout(gtx, ts.genLayout(gioTheme, th)...)
+		})
+	})
+
+	offset.Pop()
+	op.Defer(gtx.Ops, macro.Stop())
+
+	return dims
 }
 
 func modeButton(
