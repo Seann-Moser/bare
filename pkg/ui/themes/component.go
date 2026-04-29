@@ -17,12 +17,16 @@ type ThemeSelector struct {
 	PaletteButtons map[PaletteName]*widget.Clickable
 	PaletteToggle  widget.Clickable
 	PaletteOpen    bool
+	PaletteList    layout.List
 }
 
 func NewThemeSelector() *ThemeSelector {
 	ts := &ThemeSelector{
 		ModeButtons:    map[Mode]*widget.Clickable{},
 		PaletteButtons: map[PaletteName]*widget.Clickable{},
+		PaletteList: layout.List{
+			Axis: layout.Vertical,
+		},
 	}
 
 	for _, mode := range []Mode{ModeSystem, ModeLight, ModeDark} {
@@ -152,12 +156,15 @@ func (ts *ThemeSelector) paletteDropdown(
 	menuGTX := gtx
 	menuGTX.Constraints.Min = image.Pt(dims.Size.X, 0)
 	menuGTX.Constraints.Max.X = dims.Size.X
+	menuGTX.Constraints.Max.Y = gtx.Dp(unit.Dp(240))
 
 	dropdownSurface(menuGTX, th, func(gtx layout.Context) layout.Dimensions {
 		return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			return layout.Flex{
-				Axis: layout.Vertical,
-			}.Layout(gtx, ts.genLayout(gioTheme, th)...)
+			return ts.PaletteList.Layout(gtx, 1, func(gtx layout.Context, _ int) layout.Dimensions {
+				return layout.Flex{
+					Axis: layout.Vertical,
+				}.Layout(gtx, ts.genLayout(gioTheme, th)...)
+			})
 		})
 	})
 

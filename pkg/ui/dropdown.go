@@ -15,6 +15,7 @@ import (
 type Dropdown struct {
 	Toggle widget.Clickable
 	Open   bool
+	List   layout.List
 
 	Prefix     string
 	Variant    ButtonVariant
@@ -80,7 +81,12 @@ func (d *Dropdown) Layout(
 	)
 
 	utils.Panel(menuGTX, th.Color.Surface, unit.Dp(th.Radius.MD), func(gtx layout.Context) layout.Dimensions {
-		return layout.UniformInset(unit.Dp(8)).Layout(gtx, menu)
+		return layout.UniformInset(unit.Dp(8)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			d.ensureListAxis()
+			return d.List.Layout(gtx, 1, func(gtx layout.Context, _ int) layout.Dimensions {
+				return menu(gtx)
+			})
+		})
 	})
 
 	offset.Pop()
@@ -115,4 +121,10 @@ func (d *Dropdown) variant() ButtonVariant {
 		return ButtonSecondary
 	}
 	return d.Variant
+}
+
+func (d *Dropdown) ensureListAxis() {
+	if d.List.Axis != layout.Vertical {
+		d.List.Axis = layout.Vertical
+	}
 }
