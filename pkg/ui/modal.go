@@ -11,8 +11,8 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"github.com/Seann-Moser/bare/pkg/ui/themes"
-	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
+	"github.com/DarlingGoose/bare/pkg/ui/themes"
+	uiutils "github.com/DarlingGoose/bare/pkg/ui/utils"
 )
 
 type Modal struct {

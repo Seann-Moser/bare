@@ -9,7 +9,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
+	uiutils "github.com/DarlingGoose/bare/pkg/ui/utils"
 )
 
 type ThemeSelector struct {

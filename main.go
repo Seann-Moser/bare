@@ -11,8 +11,8 @@ import (
 	"gioui.org/op"
 	"gioui.org/op/paint"
 	"gioui.org/unit"
-	"github.com/Seann-Moser/bare/apps/dashboard"
-	"github.com/Seann-Moser/bare/cmd"
+	"github.com/DarlingGoose/bare/apps/dashboard"
+	"github.com/DarlingGoose/bare/cmd"
 )
 
 func main() {

@@ -93,8 +93,8 @@ package example
 import (
 	"gioui.org/layout"
 	"gioui.org/unit"
-	"github.com/Seann-Moser/bare/pkg/ui/icons"
-	"github.com/Seann-Moser/bare/pkg/ui/themes"
+	"github.com/DarlingGoose/bare/pkg/ui/icons"
+	"github.com/DarlingGoose/bare/pkg/ui/themes"
 )
 
 type Widget struct {

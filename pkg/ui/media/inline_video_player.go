@@ -7,7 +7,7 @@ import (
 
 	"gioui.org/layout"
 	"gioui.org/op"
-	videoplayer "github.com/Seann-Moser/bare/pkg/ui/media/videoPlayer"
+	videoplayer "github.com/DarlingGoose/bare/pkg/ui/media/videoPlayer"
 )
 
 type InlineVideoPlayer struct {

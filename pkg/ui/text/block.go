@@ -4,7 +4,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/unit"
 	"gioui.org/widget/material"
-	"github.com/Seann-Moser/bare/pkg/ui/themes"
+	"github.com/DarlingGoose/bare/pkg/ui/themes"
 )
 
 type TextBlockKind string

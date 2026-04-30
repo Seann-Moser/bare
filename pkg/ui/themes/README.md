@@ -45,7 +45,7 @@ Create a theme directly:
 ```go
 package main
 
-import "github.com/Seann-Moser/bare/pkg/ui/themes"
+import "github.com/DarlingGoose/bare/pkg/ui/themes"
 
 func main() {
 	systemDark := false

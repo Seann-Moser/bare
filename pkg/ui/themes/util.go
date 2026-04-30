@@ -3,7 +3,7 @@ package themes
 import (
 	"image/color"
 
-	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
+	uiutils "github.com/DarlingGoose/bare/pkg/ui/utils"
 )
 
 func readableOn(bg color.NRGBA) color.NRGBA {

@@ -16,12 +16,12 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"github.com/Seann-Moser/bare/pkg/ui"
-	"github.com/Seann-Moser/bare/pkg/ui/icons"
-	"github.com/Seann-Moser/bare/pkg/ui/media"
-	uitext "github.com/Seann-Moser/bare/pkg/ui/text"
-	"github.com/Seann-Moser/bare/pkg/ui/themes"
-	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
+	"github.com/DarlingGoose/bare/pkg/ui"
+	"github.com/DarlingGoose/bare/pkg/ui/icons"
+	"github.com/DarlingGoose/bare/pkg/ui/media"
+	uitext "github.com/DarlingGoose/bare/pkg/ui/text"
+	"github.com/DarlingGoose/bare/pkg/ui/themes"
+	uiutils "github.com/DarlingGoose/bare/pkg/ui/utils"
 )
 
 type FileBrowser struct {

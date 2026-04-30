@@ -5,7 +5,7 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"github.com/Seann-Moser/bare/pkg/ui/themes"
+	"github.com/DarlingGoose/bare/pkg/ui/themes"
 )
 
 type TextEditor struct {

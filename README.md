@@ -73,7 +73,7 @@ Shared Gio widgets and layout helpers used by the dashboard:
 - `Topbar`
 - `AppShell`
 
-See [pkg/ui/README.md](/home/n9s/go/src/github.com/Seann-Moser/bare/pkg/ui/README.md).
+See [pkg/ui/README.md](/home/n9s/go/src/github.com/DarlingGoose/bare/pkg/ui/README.md).
 
 ### `pkg/ui/themes`
 
@@ -86,13 +86,13 @@ Features:
 - theme selector widget
 - config load/save helpers
 
-See [pkg/ui/themes/README.md](/home/n9s/go/src/github.com/Seann-Moser/bare/pkg/ui/themes/README.md).
+See [pkg/ui/themes/README.md](/home/n9s/go/src/github.com/DarlingGoose/bare/pkg/ui/themes/README.md).
 
 ### `pkg/ui/icons`
 
 Iconify-backed icon loading for Gio. Icons are fetched as SVG, cached locally, and rasterized for painting.
 
-See [pkg/ui/icons/README.md](/home/n9s/go/src/github.com/Seann-Moser/bare/pkg/ui/icons/README.md).
+See [pkg/ui/icons/README.md](/home/n9s/go/src/github.com/DarlingGoose/bare/pkg/ui/icons/README.md).
 
 ### `pkg/ui/text`
 
@@ -103,7 +103,7 @@ Text-oriented widgets and helpers:
 - `SelectableTextBlock`
 - `ParseSimpleRichText` for lightweight formatted text parsing
 
-See [pkg/ui/text/README.md](/home/n9s/go/src/github.com/Seann-Moser/bare/pkg/ui/text/README.md).
+See [pkg/ui/text/README.md](/home/n9s/go/src/github.com/DarlingGoose/bare/pkg/ui/text/README.md).
 
 ### `pkg/ui/filemanager`
 
@@ -146,7 +146,7 @@ Media preview primitives used by the file browser:
 
 ## Notes For Development
 
-- The root module path is `github.com/Seann-Moser/bare`.
+- The root module path is `github.com/DarlingGoose/bare`.
 - The repo vendors its dependencies under `vendor/`.
 - The dashboard window title is currently `Gio Dashboard`.
 - The `gui --file` flag exists, but the dashboard launch path does not currently use it.

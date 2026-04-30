@@ -9,8 +9,8 @@ import (
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 	"golang.org/x/exp/shiny/materialdesign/icons"
-	"github.com/Seann-Moser/bare/pkg/ui/themes"
-	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
+	"github.com/DarlingGoose/bare/pkg/ui/themes"
+	uiutils "github.com/DarlingGoose/bare/pkg/ui/utils"
 )
 
 type MediaControls struct {
