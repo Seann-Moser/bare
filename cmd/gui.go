@@ -9,7 +9,7 @@ import (
 	"gioui.org/app"
 	"gioui.org/op"
 	"gioui.org/unit"
-	"github.com/Seann-Moser/bare/apps/dashboard"
+	"github.com/DarlingGoose/bare/apps/dashboard"
 	"github.com/spf13/cobra"
 )
 

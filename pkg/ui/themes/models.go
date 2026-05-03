@@ -15,8 +15,12 @@ var (
 )
 
 type RawPalette struct {
-	Name   PaletteName
+	Name  PaletteName
+	Label string
+
 	Colors [4]color.NRGBA
+	Light  ColorTokens
+	Dark   ColorTokens
 }
 
 type Theme struct {

@@ -3,53 +3,11 @@ package themes
 import (
 	"image/color"
 
-	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
+	uiutils "github.com/DarlingGoose/bare/pkg/ui/utils"
 )
 
 func readableOn(bg color.NRGBA) color.NRGBA {
 	return uiutils.ReadableOn(bg)
-}
-
-func lightTokens(p RawPalette) ColorTokens {
-	return ColorTokens{
-		Primary:   p.Colors[0],
-		Secondary: p.Colors[1],
-		Tertiary:  p.Colors[2],
-		Accent:    p.Colors[3],
-
-		Background: Hex("#FAFAF7"),
-		Surface:    Hex("#FFFFFF"),
-		SurfaceAlt: Mix(p.Colors[3], Hex("#FFFFFF"), 0.65),
-		Border:     Mix(p.Colors[0], Hex("#000000"), 0.18),
-
-		Text:      Hex("#17202A"),
-		TextMuted: Hex("#667085"),
-
-		Success: Hex("#3BA55D"),
-		Warning: Hex("#D99A21"),
-		Error:   Hex("#D64545"),
-	}
-}
-
-func darkTokens(p RawPalette) ColorTokens {
-	return ColorTokens{
-		Primary:   p.Colors[0],
-		Secondary: p.Colors[1],
-		Tertiary:  p.Colors[2],
-		Accent:    p.Colors[3],
-
-		Background: Hex("#0E1116"),
-		Surface:    Hex("#171B22"),
-		SurfaceAlt: Mix(p.Colors[0], Hex("#171B22"), 0.22),
-		Border:     Mix(p.Colors[1], Hex("#FFFFFF"), 0.22),
-
-		Text:      Hex("#F5F7FA"),
-		TextMuted: Hex("#AAB2C0"),
-
-		Success: Hex("#5CC878"),
-		Warning: Hex("#E5B84E"),
-		Error:   Hex("#FF6B6B"),
-	}
 }
 
 func parseHexByte(a, b byte) uint8 {

@@ -1,4 +1,4 @@
-module github.com/Seann-Moser/bare
+module github.com/DarlingGoose/bare
 
 go 1.26.2
 

@@ -19,7 +19,7 @@ This package is responsible for:
 - `Mode`
   - `system`, `light`, `dark`
 - `PaletteName`
-  - `sunset`, `coastal`, `sky`, `blush`, `ocean`, `pastel`
+  - `moonlit_library`, `sakura_study`, `cyber_glossary`, `ink_paper`, `royal_otome`
 - `Config`
   - persisted theme settings with `Mode` and `Palette`
 - `ThemeSelector`
@@ -45,11 +45,11 @@ Create a theme directly:
 ```go
 package main
 
-import "github.com/Seann-Moser/bare/pkg/ui/themes"
+import "github.com/DarlingGoose/bare/pkg/ui/themes"
 
 func main() {
 	systemDark := false
-	th := themes.New(themes.ModeDark, themes.PaletteOcean, systemDark)
+	th := themes.New(themes.ModeDark, themes.PaletteMoonlitLibrary, systemDark)
 
 	_ = th.Color.Primary
 	_ = th.Space.MD
@@ -77,7 +77,46 @@ Example file:
 
 ```yaml
 mode: dark
-palette: ocean
+palette: moonlit_library
+```
+
+## Custom Themes
+
+Custom themes are loaded from the user config directory:
+
+```text
+~/.config/bare/themes.yaml
+~/.config/bare/themes/*.yaml
+```
+
+The settings page includes a `Reload Custom Themes` button so users can update YAML files without restarting the app. Custom theme names must use lowercase letters, numbers, underscores, or hyphens, and cannot replace built-in theme names.
+
+Example:
+
+```yaml
+themes:
+  twilight_notes:
+    label: Twilight Notes
+    light:
+      background: "#F8F3EA"
+      surface: "#FFFFFF"
+      text: "#211E1B"
+      text_muted: "#625B54"
+      primary: "#6C4A9E"
+      secondary: "#1F6D68"
+      success: "#2F7D46"
+      warning: "#8A5A00"
+      error: "#B3261E"
+    dark:
+      background: "#121019"
+      surface: "#1D1926"
+      text: "#F4EFFA"
+      text_muted: "#BDB3C9"
+      primary: "#C8B6FF"
+      secondary: "#8EC5B5"
+      success: "#88C999"
+      warning: "#F3C969"
+      error: "#FF8C8C"
 ```
 
 Load and save:

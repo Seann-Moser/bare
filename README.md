@@ -73,7 +73,7 @@ Shared Gio widgets and layout helpers used by the dashboard:
 - `Topbar`
 - `AppShell`
 
-See [pkg/ui/README.md](/home/n9s/go/src/github.com/Seann-Moser/bare/pkg/ui/README.md).
+See [pkg/ui/README.md](/home/n9s/go/src/github.com/DarlingGoose/bare/pkg/ui/README.md).
 
 ### `pkg/ui/themes`
 
@@ -82,17 +82,17 @@ Theme construction, palette selection, Gio `material.Theme` integration, and con
 Features:
 
 - `light`, `dark`, and `system` modes
-- palette presets: `sunset`, `coastal`, `sky`, `blush`, `ocean`, `pastel`
+- study-focused palette presets: `moonlit_library`, `sakura_study`, `cyber_glossary`, `ink_paper`, `royal_otome`
 - theme selector widget
 - config load/save helpers
 
-See [pkg/ui/themes/README.md](/home/n9s/go/src/github.com/Seann-Moser/bare/pkg/ui/themes/README.md).
+See [pkg/ui/themes/README.md](/home/n9s/go/src/github.com/DarlingGoose/bare/pkg/ui/themes/README.md).
 
 ### `pkg/ui/icons`
 
 Iconify-backed icon loading for Gio. Icons are fetched as SVG, cached locally, and rasterized for painting.
 
-See [pkg/ui/icons/README.md](/home/n9s/go/src/github.com/Seann-Moser/bare/pkg/ui/icons/README.md).
+See [pkg/ui/icons/README.md](/home/n9s/go/src/github.com/DarlingGoose/bare/pkg/ui/icons/README.md).
 
 ### `pkg/ui/text`
 
@@ -103,7 +103,7 @@ Text-oriented widgets and helpers:
 - `SelectableTextBlock`
 - `ParseSimpleRichText` for lightweight formatted text parsing
 
-See [pkg/ui/text/README.md](/home/n9s/go/src/github.com/Seann-Moser/bare/pkg/ui/text/README.md).
+See [pkg/ui/text/README.md](/home/n9s/go/src/github.com/DarlingGoose/bare/pkg/ui/text/README.md).
 
 ### `pkg/ui/filemanager`
 
@@ -114,8 +114,25 @@ A file browser widget with:
 - hidden file toggling
 - directory and file selection
 - text and media preview
+- `DirectoryPicker` modal wrapper for choosing a folder and receiving the picked path
 
 The file browser currently acts as one of the main integration points for the media and text packages.
+
+Minimal directory picker usage:
+
+```go
+picker := filemanager.NewDirectoryPicker("")
+picker.OnPick = func(dir string) {
+    fmt.Println("picked directory:", dir)
+}
+picker.Open("")
+
+dir, picked, dims := picker.Layout(gtx, th, ic)
+if picked {
+    fmt.Println("picked directory:", dir)
+}
+_ = dims
+```
 
 ### `pkg/ui/media`
 
@@ -146,7 +163,7 @@ Media preview primitives used by the file browser:
 
 ## Notes For Development
 
-- The root module path is `github.com/Seann-Moser/bare`.
+- The root module path is `github.com/DarlingGoose/bare`.
 - The repo vendors its dependencies under `vendor/`.
 - The dashboard window title is currently `Gio Dashboard`.
 - The `gui --file` flag exists, but the dashboard launch path does not currently use it.

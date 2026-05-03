@@ -16,12 +16,12 @@ import (
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	"github.com/Seann-Moser/bare/pkg/ui"
-	"github.com/Seann-Moser/bare/pkg/ui/icons"
-	"github.com/Seann-Moser/bare/pkg/ui/media"
-	uitext "github.com/Seann-Moser/bare/pkg/ui/text"
-	"github.com/Seann-Moser/bare/pkg/ui/themes"
-	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
+	"github.com/DarlingGoose/bare/pkg/ui"
+	"github.com/DarlingGoose/bare/pkg/ui/icons"
+	"github.com/DarlingGoose/bare/pkg/ui/media"
+	uitext "github.com/DarlingGoose/bare/pkg/ui/text"
+	"github.com/DarlingGoose/bare/pkg/ui/themes"
+	uiutils "github.com/DarlingGoose/bare/pkg/ui/utils"
 )
 
 type FileBrowser struct {
@@ -40,10 +40,13 @@ type FileBrowser struct {
 	CreateInput  widget.Editor
 	CreateButton widget.Clickable
 
-	ShowHidden bool
-	Extensions []string // example: []string{".png", ".jpg", ".mp4"}
-	SortMode   FileSortMode
-	SortDesc   bool
+	ShowHidden      bool
+	Extensions      []string // example: []string{".png", ".jpg", ".mp4"}
+	DirectoriesOnly bool
+	ShowDelete      bool
+	ShowPreview     bool
+	SortMode        FileSortMode
+	SortDesc        bool
 
 	List layout.List
 
@@ -119,7 +122,9 @@ func NewFileBrowser(dir string) *FileBrowser {
 			OffsetY:    unit.Dp(48),
 			AlignRight: true,
 		},
-		SortMode: FileSortName,
+		SortMode:    FileSortName,
+		ShowDelete:  true,
+		ShowPreview: true,
 	}
 }
 
@@ -237,7 +242,7 @@ func (b *FileBrowser) Layout(
 			return uiutils.SpacerH(8)(gtx)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			if b.SelectedPath == "" {
+			if !b.ShowPreview || b.SelectedPath == "" {
 				return b.layoutList(gtx, th, ic, entries)
 			}
 
@@ -503,6 +508,10 @@ func (b *FileBrowser) readEntries() ([]FileEntry, error) {
 		isDir := item.IsDir()
 		info, _ := item.Info()
 
+		if b.DirectoriesOnly && !isDir {
+			continue
+		}
+
 		if !isDir && len(b.Extensions) > 0 && !b.allowedExt(path) {
 			continue
 		}
@@ -634,7 +643,7 @@ func (b *FileBrowser) layoutRow(
 						return lbl.Layout(gtx)
 					}),
 					layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-						if entry.Name == ".." {
+						if !b.ShowDelete || entry.Name == ".." {
 							return layout.Dimensions{}
 						}
 

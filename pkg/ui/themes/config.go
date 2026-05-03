@@ -18,11 +18,12 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		Mode:    ModeSystem,
-		Palette: PaletteOcean,
+		Palette: PaletteMoonlitLibrary,
 	}
 }
 
 func (c Config) Theme(systemDark bool) Theme {
+	_ = LoadCustomThemes()
 	cfg := c.normalized()
 	return New(cfg.Mode, cfg.Palette, systemDark)
 }
@@ -35,6 +36,8 @@ func ConfigFromTheme(th Theme) Config {
 }
 
 func LoadConfig() (Config, error) {
+	_ = LoadCustomThemes()
+
 	path, err := configPath()
 	if err != nil {
 		return DefaultConfig(), err
@@ -77,12 +80,21 @@ func SaveConfig(cfg Config) error {
 }
 
 func configPath() (string, error) {
+	dir, err := configDir()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(dir, "theme.yaml"), nil
+}
+
+func configDir() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
 
-	return filepath.Join(dir, ConfigAppName, "theme.yaml"), nil
+	return filepath.Join(dir, ConfigAppName), nil
 }
 
 func (c Config) normalized() Config {

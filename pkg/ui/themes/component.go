@@ -2,25 +2,27 @@ package themes
 
 import (
 	"image"
-	"sort"
 
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
-	uiutils "github.com/Seann-Moser/bare/pkg/ui/utils"
+	uiutils "github.com/DarlingGoose/bare/pkg/ui/utils"
 )
 
 type ThemeSelector struct {
-	ModeButtons    map[Mode]*widget.Clickable
-	PaletteButtons map[PaletteName]*widget.Clickable
-	PaletteToggle  widget.Clickable
-	PaletteOpen    bool
-	PaletteList    layout.List
+	ModeButtons     map[Mode]*widget.Clickable
+	PaletteButtons  map[PaletteName]*widget.Clickable
+	PaletteToggle   widget.Clickable
+	PaletteOpen     bool
+	PaletteList     layout.List
+	ReloadCustom    widget.Clickable
+	CustomLoadError string
 }
 
 func NewThemeSelector() *ThemeSelector {
+	loadErr := LoadCustomThemes()
 	ts := &ThemeSelector{
 		ModeButtons:    map[Mode]*widget.Clickable{},
 		PaletteButtons: map[PaletteName]*widget.Clickable{},
@@ -28,14 +30,15 @@ func NewThemeSelector() *ThemeSelector {
 			Axis: layout.Vertical,
 		},
 	}
+	if loadErr != nil {
+		ts.CustomLoadError = loadErr.Error()
+	}
 
 	for _, mode := range []Mode{ModeSystem, ModeLight, ModeDark} {
 		ts.ModeButtons[mode] = new(widget.Clickable)
 	}
 
-	for name := range Palettes {
-		ts.PaletteButtons[name] = new(widget.Clickable)
-	}
+	ts.ensurePaletteButtons()
 
 	return ts
 }
@@ -45,6 +48,7 @@ func (ts *ThemeSelector) Layout(
 	th Theme,
 	systemDark bool,
 ) layout.Dimensions {
+	ts.handleCustomReload(gtx)
 	for mode, btn := range ts.ModeButtons {
 		for btn.Clicked(gtx) {
 			th = New(mode, th.Palette, systemDark)
@@ -70,6 +74,7 @@ func (ts *ThemeSelector) LayoutThemeSelector(
 	th Theme,
 	systemDark bool,
 ) (Theme, layout.Dimensions) {
+	ts.handleCustomReload(gtx)
 	for mode, btn := range ts.ModeButtons {
 		for btn.Clicked(gtx) {
 			th = New(mode, th.Palette, systemDark)
@@ -98,6 +103,18 @@ func (ts *ThemeSelector) layout(gtx layout.Context, th Theme) layout.Dimensions 
 		Axis: layout.Vertical,
 	}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return themeGuidance(gtx, gioTheme, th)
+		}),
+
+		layout.Rigid(uiutils.Spacer(16)),
+
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return customThemeControls(gtx, gioTheme, th, ts)
+		}),
+
+		layout.Rigid(uiutils.Spacer(16)),
+
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return settingHeader(gtx, gioTheme, th, "Theme Mode", "")
 		}),
 
@@ -125,17 +142,94 @@ func (ts *ThemeSelector) layout(gtx layout.Context, th Theme) layout.Dimensions 
 	)
 }
 
-func (ts *ThemeSelector) genLayout(gioTheme *material.Theme, th Theme) (l []layout.FlexChild) {
-	keys := make([]string, 0, len(Palettes))
-	for k := range Palettes {
-		keys = append(keys, string(k))
+func (ts *ThemeSelector) handleCustomReload(gtx layout.Context) {
+	for ts.ReloadCustom.Clicked(gtx) {
+		if err := LoadCustomThemes(); err != nil {
+			ts.CustomLoadError = err.Error()
+		} else {
+			ts.CustomLoadError = ""
+		}
+		ts.ensurePaletteButtons()
 	}
+}
 
-	sort.Strings(keys)
+func (ts *ThemeSelector) ensurePaletteButtons() {
+	for name := range Palettes {
+		if _, ok := ts.PaletteButtons[name]; !ok {
+			ts.PaletteButtons[name] = new(widget.Clickable)
+		}
+	}
+}
 
-	for _, k := range keys {
-		j := PaletteName(k)
-		l = append(l, paletteButton(gioTheme, ts.PaletteButtons[j], Palettes[j], th.Palette == j))
+func themeGuidance(
+	gtx layout.Context,
+	gioTheme *material.Theme,
+	th Theme,
+) layout.Dimensions {
+	return layout.Flex{
+		Axis: layout.Vertical,
+	}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			lbl := material.Body1(gioTheme, "Theme Notes")
+			lbl.Color = th.Color.Text
+			return lbl.Layout(gtx)
+		}),
+		layout.Rigid(uiutils.Spacer(6)),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			lbl := material.Body2(gioTheme, "Moonlit Library is the balanced default. Sakura Study and Royal Otome are warmer VN-style options, Cyber Glossary fits tooling-heavy workflows, and Ink & Paper is best for long reading.")
+			lbl.Color = th.Color.TextMuted
+			return lbl.Layout(gtx)
+		}),
+		layout.Rigid(uiutils.Spacer(6)),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			lbl := material.Body2(gioTheme, "Accessibility: keep contrast high, preserve visible focus states, and pair color-coded states with labels, icons, underlines, or borders.")
+			lbl.Color = th.Color.TextMuted
+			return lbl.Layout(gtx)
+		}),
+	)
+}
+
+func customThemeControls(
+	gtx layout.Context,
+	gioTheme *material.Theme,
+	th Theme,
+	ts *ThemeSelector,
+) layout.Dimensions {
+	return layout.Flex{
+		Axis: layout.Vertical,
+	}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return settingHeader(gtx, gioTheme, th, "Custom Themes", "Load from ~/.config/bare/themes.yaml or ~/.config/bare/themes/*.yaml")
+		}),
+		layout.Rigid(uiutils.Spacer(8)),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			b := material.Button(gioTheme, &ts.ReloadCustom, "Reload Custom Themes")
+			b.Background = th.Color.Secondary
+			b.Color = readableOn(th.Color.Secondary)
+			b.Inset = layout.UniformInset(unit.Dp(8))
+			return b.Layout(gtx)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			if ts.CustomLoadError == "" {
+				return layout.Dimensions{}
+			}
+
+			return layout.Inset{Top: unit.Dp(8)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				lbl := material.Body2(gioTheme, "Custom theme load error: "+ts.CustomLoadError)
+				lbl.Color = th.Color.Error
+				return lbl.Layout(gtx)
+			})
+		}),
+	)
+}
+
+func (ts *ThemeSelector) genLayout(gioTheme *material.Theme, th Theme) (l []layout.FlexChild) {
+	for _, name := range OrderedPalettes() {
+		palette, ok := Palettes[name]
+		if !ok {
+			continue
+		}
+		l = append(l, paletteButton(gioTheme, ts.PaletteButtons[name], palette, th.Palette == name))
 	}
 	return
 }
@@ -303,20 +397,9 @@ func modeLabel(mode Mode) string {
 }
 
 func paletteLabel(name PaletteName) string {
-	switch name {
-	case PaletteSunset:
-		return "Sunset"
-	case PaletteCoastal:
-		return "Coastal"
-	case PaletteSky:
-		return "Sky"
-	case PaletteBlush:
-		return "Blush"
-	case PaletteOcean:
-		return "Ocean"
-	case PalettePastel:
-		return "Pastel"
-	default:
-		return string(name)
+	if palette, ok := Palettes[name]; ok && palette.Label != "" {
+		return palette.Label
 	}
+
+	return string(name)
 }
